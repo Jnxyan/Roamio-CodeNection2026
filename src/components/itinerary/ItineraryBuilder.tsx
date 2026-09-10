@@ -42,16 +42,32 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   onFinish,
   onBack
 }) => {
+  if (!trip) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+        <p className="text-[#374151] mb-4">No active trip found.</p>
+        <button
+          onClick={onBack}
+          className="px-4 py-2 bg-[#0EA5A5] text-white font-bold rounded-xl"
+        >
+          Back to My Plans
+        </button>
+      </div>
+    );
+  }
+
   const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategoryTab, setActiveCategoryTab] = useState<string>('Suggested');
-  const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>(trip.itinerary || []);
+  const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>(trip?.itinerary || []);
   const [draggedPlace, setDraggedPlace] = useState<DiscoverablePlace | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [resizingItemId, setResizingItemId] = useState<string | null>(null);
 
-  // Load discoverable places for the destination
-  const destinationId = trip.destinations[0]?.toLowerCase().includes('paris')
+  // Load discoverable places for the destination safely
+  const safeDestinations = trip?.destinations || [];
+  const firstDest = safeDestinations[0] || '';
+  const destinationId = firstDest.toLowerCase().includes('paris')
     ? 'dest-paris'
     : 'dest-kyoto';
   const discoverablePlaces = db.getDiscoverablePlaces(destinationId);
@@ -59,7 +75,7 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   // Initialize auto-plan if empty and mode was 'auto'
   useEffect(() => {
     if ((!trip.itinerary || trip.itinerary.length === 0) && trip.mode === 'auto') {
-      const generated = db.generateFullItinerary(destinationId, trip.days, trip.travelers);
+      const generated = db.generateFullItinerary(destinationId, trip.days || 3, trip.travelers || []);
       setItineraryItems(generated);
       const updated = { ...trip, itinerary: generated };
       db.saveTrip(updated);
@@ -74,13 +90,13 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   };
 
   // Filter items for the active day
-  const currentDayItems = itineraryItems
+  const currentDayItems = (itineraryItems || [])
     .filter(item => item.day_index === activeDayIndex)
     .sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time));
 
   // Compute transports between consecutive items
   const itemsWithTransports = currentDayItems.map((item, idx) => {
-    if (idx < currentDayItems.length - 1) {
+    if (idx < (currentDayItems?.length || 0) - 1) {
       const currentEnd = timeToMinutes(item.end_time);
       const nextStart = timeToMinutes(currentDayItems[idx + 1].start_time);
       return {
@@ -232,7 +248,7 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                 <span>Trip Overview</span>
               </button>
               <span className="text-[#374151]/40">•</span>
-              <span className="text-[#374151] font-semibold">{trip.destinations.join(' → ')}</span>
+              <span className="text-[#374151] font-semibold">{(trip.destinations || []).join(' → ') || 'Destination'}</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] font-display">
               {trip.title}
@@ -265,7 +281,7 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
 
         {/* Day Selector Bar */}
         <div className="pt-4 flex items-center gap-2 overflow-x-auto pb-1">
-          {Array.from({ length: trip.days }).map((_, dIdx) => (
+          {Array.from({ length: trip.days || 1 }).map((_, dIdx) => (
             <button
               key={dIdx}
               id={`tab-day-${dIdx + 1}`}
@@ -441,7 +457,7 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
               </h2>
             </div>
             <span className="text-xs font-bold text-[#0EA5A5] bg-[#0EA5A5]/10 px-3 py-1 rounded-xl">
-              {currentDayItems.length} Scheduled Activities
+              {currentDayItems?.length || 0} Scheduled Activities
             </span>
           </div>
 
@@ -451,7 +467,7 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
             className="relative border-l-2 border-[#0EA5A5]/30 ml-8 sm:ml-12 pl-4 sm:pl-6 space-y-6 min-h-[600px] py-4"
           >
             {/* Hour marker background grid */}
-            {itemsWithTransports.length === 0 ? (
+            {(!itemsWithTransports || itemsWithTransports.length === 0) ? (
               <div
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => {

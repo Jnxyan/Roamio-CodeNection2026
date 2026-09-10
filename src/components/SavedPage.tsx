@@ -4,20 +4,25 @@ import { Bookmark, Sparkles } from 'lucide-react';
 
 interface SavedPageProps {
   savedItems: PostCardItem[];
+  likedIds?: Set<string>;
   onToggleSave: (item: PostCardItem, e: React.MouseEvent) => void;
+  onToggleLike?: (item: PostCardItem, e: React.MouseEvent) => void;
   onItemClick: (item: PostCardItem) => void;
   onExploreClick: () => void;
 }
 
 export const SavedPage: React.FC<SavedPageProps> = ({
-  savedItems,
+  savedItems = [],
+  likedIds,
   onToggleSave,
+  onToggleLike,
   onItemClick,
   onExploreClick
 }) => {
+  const safeSavedItems = Array.isArray(savedItems) ? savedItems : [];
   const [filterType, setFilterType] = useState<'all' | 'destinations' | 'hotels' | 'restaurants' | 'plans'>('all');
 
-  const filtered = savedItems.filter(item => {
+  const filtered = safeSavedItems.filter(item => {
     if (filterType === 'all') return true;
     return item.type === filterType;
   });
@@ -37,7 +42,7 @@ export const SavedPage: React.FC<SavedPageProps> = ({
         </div>
 
         <span className="text-xs font-bold text-[#0EA5A5] bg-[#0EA5A5]/10 px-3.5 py-1.5 rounded-xl self-start sm:self-auto border border-[#0EA5A5]/20">
-          {savedItems.length} Saved {savedItems.length === 1 ? 'Item' : 'Items'}
+          {safeSavedItems.length} Saved {safeSavedItems.length === 1 ? 'Item' : 'Items'}
         </span>
       </div>
 
@@ -74,7 +79,9 @@ export const SavedPage: React.FC<SavedPageProps> = ({
               key={item.id}
               item={item}
               isSaved={true}
+              isLiked={likedIds ? likedIds.has(item.id) : false}
               onToggleSave={onToggleSave}
+              onToggleLike={onToggleLike}
               onClick={onItemClick}
             />
           ))}

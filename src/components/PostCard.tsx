@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark, Star, MapPin, Zap, ArrowUpRight, Clock } from 'lucide-react';
+import { Bookmark, Star, MapPin, ArrowUpRight, Clock, Heart } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export interface PostCardItem {
@@ -7,30 +7,37 @@ export interface PostCardItem {
   type: 'destinations' | 'hotels' | 'restaurants' | 'plans';
   title: string;
   coverPhoto: string;
-  daysOfStay: string;
+  daysOfStay?: string;
   budget: string;
+  ticketPrice?: string;
+  isFree?: boolean;
   rating: number;
   reviewsCount?: number;
   locationName: string;
   mapsUrl: string;
   operatingHours?: string;
-  energyLevel?: number; // 1-5
+  energyLevel?: number; // legacy field, not rendered on cover or card
   authorName?: string;
   authorAvatar?: string;
   subtitle?: string;
+  likesCount?: number;
 }
 
 interface PostCardProps {
   item: PostCardItem;
   isSaved?: boolean;
+  isLiked?: boolean;
   onToggleSave?: (item: PostCardItem, e: React.MouseEvent) => void;
+  onToggleLike?: (item: PostCardItem, e: React.MouseEvent) => void;
   onClick?: (item: PostCardItem) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
   item,
   isSaved = false,
+  isLiked = false,
   onToggleSave,
+  onToggleLike,
   onClick
 }) => {
   const categoryLabels = {
@@ -40,11 +47,12 @@ export const PostCard: React.FC<PostCardProps> = ({
     plans: 'Curated Plan'
   };
 
+  // Completely solid, fully opaque, non-transparent background colors
   const categoryColors = {
-    destinations: 'bg-[#0EA5A5]/10 text-[#086666] border-[#0EA5A5]/25',
-    hotels: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    restaurants: 'bg-amber-50 text-amber-800 border-amber-200',
-    plans: 'bg-[#FF6B4A]/10 text-[#C94324] border-[#FF6B4A]/25'
+    destinations: 'bg-[#0EA5A5] text-white border-[#0EA5A5]',
+    hotels: 'bg-indigo-600 text-white border-indigo-600',
+    restaurants: 'bg-amber-600 text-white border-amber-600',
+    plans: 'bg-[#FF6B4A] text-white border-[#FF6B4A]'
   };
 
   return (
@@ -67,16 +75,19 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Gradient Overlay for Text Readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
 
-        {/* Top Badges: Category & Save Bookmark */}
+        {/* Top Badges: Category (Solid Non-Transparent) & Actions */}
         <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10">
+          {/* Label with completely solid opaque background */}
           <span
-            className={`text-xs font-bold px-2.5 py-1 rounded-lg backdrop-blur-md border ${
+            id={`badge-cat-${item.id}`}
+            className={`text-xs font-extrabold px-3 py-1 rounded-lg shadow-sm border ${
               categoryColors[item.type]
             }`}
           >
             {categoryLabels[item.type]}
           </span>
 
+          {/* Bookmark button */}
           <button
             id={`btn-save-${item.id}`}
             onClick={(e) => {
@@ -84,28 +95,44 @@ export const PostCard: React.FC<PostCardProps> = ({
               onToggleSave && onToggleSave(item, e);
             }}
             aria-label={isSaved ? 'Remove from saved' : 'Save post'}
-            className={`p-2 rounded-xl backdrop-blur-md transition-all shadow-sm cursor-pointer ${
+            className={`p-2 rounded-xl transition-all shadow-sm cursor-pointer ${
               isSaved
                 ? 'bg-[#0EA5A5] text-white hover:bg-[#0B8585]'
-                : 'bg-white/90 text-[#1F2937] hover:bg-white hover:text-[#0EA5A5]'
+                : 'bg-white text-[#1F2937] hover:text-[#0EA5A5]'
             }`}
           >
             <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-white' : ''}`} />
           </button>
         </div>
 
-        {/* Bottom Floating Stats over Image: Days & Budget */}
-        <div className="absolute bottom-3 inset-x-3 flex items-end justify-between text-white z-10">
-          <div className="flex items-center gap-1.5 text-xs font-semibold bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-md">
-            <Clock className="w-3.5 h-3.5 text-[#0EA5A5]" />
-            <span>{item.daysOfStay}</span>
-          </div>
+        {/* Bottom Floating Stats over Image: Days & Budget/Ticket Price */}
+        <div className="absolute bottom-3 inset-x-3 flex items-end justify-between text-white z-10 pointer-events-none">
+          {item.type !== 'destinations' && item.daysOfStay ? (
+            <div className="flex items-center gap-1.5 text-xs font-semibold bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md">
+              <Clock className="w-3.5 h-3.5 text-[#0EA5A5]" />
+              <span>{item.daysOfStay}</span>
+            </div>
+          ) : (
+            <div />
+          )}
 
+          {/* Ticket / Budget Badge */}
           <div
             id={`budget-badge-${item.id}`}
-            className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[#FF6B4A] text-white shadow-sm flex items-center gap-1"
+            className={`text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1 ${
+              item.type === 'destinations' &&
+              (item.ticketPrice?.toLowerCase() === 'free' ||
+                item.budget?.toLowerCase() === 'free' ||
+                item.isFree)
+                ? 'bg-emerald-600 text-white font-extrabold tracking-wide'
+                : 'bg-[#FF6B4A] text-white'
+            }`}
           >
-            <span>{item.budget}</span>
+            <span>
+              {item.type === 'destinations'
+                ? item.ticketPrice || item.budget || 'Free'
+                : item.budget}
+            </span>
           </div>
         </div>
       </div>
@@ -116,7 +143,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           {/* Location & Rating */}
           <div className="flex items-center justify-between gap-2 mb-2 text-xs">
             <span className="flex items-center gap-1 text-[#374151] font-medium truncate">
-              <MapPin className="w-3.5 h-3.5 text-[#0EA5A5] shrink-0" />
+              <MapPin className="w-3.5 h-3.5 text-[#0EA5A5]" />
               <span className="truncate">{item.locationName}</span>
             </span>
 
@@ -144,42 +171,43 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </div>
 
-        {/* Bottom Section: Energy Bolts / Author & Deep-Link */}
+        {/* Bottom Section: Likes Action & Author & Deep-Link */}
         <div className="mt-4 pt-3 border-t border-[#EFEAE2] flex items-center justify-between text-xs">
-          {item.energyLevel ? (
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-semibold text-[#374151]/70">Energy:</span>
-              <div className="flex items-center" title={`${item.energyLevel} of 5 energy intensity`}>
-                {[1, 2, 3, 4, 5].map((lvl) => (
-                  <Zap
-                    key={lvl}
-                    className={`w-3.5 h-3.5 ${
-                      lvl <= item.energyLevel!
-                        ? 'text-amber-500 fill-amber-500'
-                        : 'text-gray-300'
-                    }`}
+          <div className="flex items-center gap-2">
+            {/* Interactive Like button replacing legacy energy */}
+            <button
+              id={`btn-like-${item.id}`}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleLike && onToggleLike(item, e);
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                isLiked
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-xs'
+                  : 'bg-[#FBF7F2] text-[#374151] hover:bg-rose-50 hover:text-rose-600 border border-[#D9CFC2]/60'
+              }`}
+              title={isLiked ? 'Unlike' : 'Like'}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-rose-400'}`} />
+              <span>{(item.likesCount || 0).toLocaleString()} likes</span>
+            </button>
+
+            {item.authorName && (
+              <div className="hidden sm:flex items-center gap-1.5">
+                {item.authorAvatar ? (
+                  <img
+                    src={item.authorAvatar}
+                    alt={item.authorName}
+                    className="w-5 h-5 rounded-full object-cover"
                   />
-                ))}
+                ) : null}
+                <span className="text-[11px] text-[#374151] font-medium truncate max-w-[100px]">
+                  By {item.authorName}
+                </span>
               </div>
-            </div>
-          ) : item.authorName ? (
-            <div className="flex items-center gap-1.5">
-              {item.authorAvatar ? (
-                <img
-                  src={item.authorAvatar}
-                  alt={item.authorName}
-                  className="w-5 h-5 rounded-full object-cover"
-                />
-              ) : null}
-              <span className="text-[11px] text-[#374151] font-medium truncate max-w-[120px]">
-                By {item.authorName}
-              </span>
-            </div>
-          ) : (
-            <span className="text-[11px] text-[#374151]/70 font-medium">
-              Verified Roamio Place
-            </span>
-          )}
+            )}
+          </div>
 
           {/* External Map deep link trigger */}
           <a

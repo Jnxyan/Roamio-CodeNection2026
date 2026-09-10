@@ -8,6 +8,15 @@ export interface User {
   avatar?: string;
 }
 
+export interface Review {
+  id: string;
+  user: string;
+  avatar: string;
+  rating: number;
+  date: string;
+  comment: string;
+}
+
 export interface Destination {
   id: string;
   name: string;
@@ -22,25 +31,21 @@ export interface Destination {
   activities: string[];
   operating_hours: string;
   maps_url: string;
-  avg_budget_tiers: {
+  ticket_price: string; // "Free", "$24", etc.
+  is_free?: boolean;
+  typical_visit_time?: string;
+  avg_budget_tiers?: {
     backpacker: number;
     balanced: number;
     luxury: number;
   };
-  typical_days: number;
-  itinerary_example: {
+  typical_days?: number;
+  itinerary_example?: {
     day: number;
     title: string;
     highlights: string[];
   }[];
-  reviews: {
-    id: string;
-    user: string;
-    avatar: string;
-    rating: number;
-    date: string;
-    comment: string;
-  }[];
+  reviews: Review[];
 }
 
 export interface Hotel {

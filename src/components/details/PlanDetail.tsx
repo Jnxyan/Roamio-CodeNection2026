@@ -152,6 +152,13 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
       <div className="bg-white rounded-3xl border border-[#D9CFC2] p-6 sm:p-8 shadow-xs space-y-8">
         {/* Field 1: Title */}
         <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="font-extrabold text-white bg-[#FF6B4A] px-3 py-1 rounded-lg text-xs shadow-xs">
+              Curated Plan
+            </span>
+            <span className="text-[#374151]/50">•</span>
+            <span className="text-xs text-[#374151] font-semibold">{plan.destination_name}</span>
+          </div>
           <h1 id="plan-field-1-title" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1F2937] font-display leading-tight">
             {plan.title}
           </h1>

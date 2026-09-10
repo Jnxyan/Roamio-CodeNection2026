@@ -43,8 +43,11 @@ export default function App() {
   const [wizardPrefillDest, setWizardPrefillDest] = useState<Destination | null>(null);
   const [wizardPrefillPlan, setWizardPrefillPlan] = useState<Plan | null>(null);
 
-  // Liked plan IDs state
-  const [likedPlanIds, setLikedPlanIds] = useState<Set<string>>(new Set(['plan-1']));
+  // Liked items IDs state
+  const [likedItemIds, setLikedItemIds] = useState<Set<string>>(() => {
+    const list = db.getAllPostCardItems().filter(p => db.isLiked(p.id)).map(p => p.id);
+    return new Set(list);
+  });
 
   // Auth modal
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -131,21 +134,40 @@ export default function App() {
   // Delete trip
   const handleDeleteTrip = (tripId: string) => {
     const updated = db.deleteTrip(tripId);
-    setTrips(updated);
+    const safeUpdated = updated || db.getTrips();
+    setTrips(safeUpdated);
     if (activeTrip?.id === tripId) {
-      setActiveTrip(updated[0] || null);
+      setActiveTrip(safeUpdated[0] || null);
     }
   };
 
-  // Toggle like on plan
-  const handleToggleLikePlan = (planId: string) => {
-    const updated = new Set(likedPlanIds);
-    if (updated.has(planId)) {
-      updated.delete(planId);
+  // Toggle like on any post item (destinations, hotels, restaurants, plans)
+  const handleToggleLikeItem = (item: PostCardItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const result = db.toggleLike(item.id);
+    const updated = new Set(likedItemIds);
+    if (result.liked) {
+      updated.add(item.id);
     } else {
-      updated.add(planId);
+      updated.delete(item.id);
     }
-    setLikedPlanIds(updated);
+    setLikedItemIds(updated);
+    setAllPostCards(db.getAllPostCardItems());
+  };
+
+  const handleToggleLikePlan = (planId: string) => {
+    const result = db.toggleLike(planId);
+    const updated = new Set(likedItemIds);
+    if (result.liked) {
+      updated.add(planId);
+    } else {
+      updated.delete(planId);
+    }
+    setLikedItemIds(updated);
+    if (activePlan && activePlan.id === planId) {
+      activePlan.likes = result.count;
+    }
+    setAllPostCards(db.getAllPostCardItems());
   };
 
   return (
@@ -153,8 +175,8 @@ export default function App() {
       {/* Global Navbar */}
       <Header
         currentUser={currentUser}
-        savedCount={savedItems.length}
-        plansCount={trips.length}
+        savedCount={savedItems?.length || 0}
+        plansCount={trips?.length || 0}
         activeTab={view === 'detail-destination' || view === 'detail-hotel' || view === 'detail-restaurant' || view === 'detail-plan' ? 'home' : view}
         onNavigate={(tab) => {
           if (tab === 'login') {
@@ -176,7 +198,9 @@ export default function App() {
           <HomePage
             postCards={allPostCards}
             savedIds={savedIdsSet}
+            likedIds={likedItemIds}
             onToggleSave={handleToggleSave}
+            onToggleLike={handleToggleLikeItem}
             onOpenDetail={handleOpenDetail}
             onLaunchCreateTrip={() => {
               setWizardPrefillDest(null);
@@ -190,7 +214,9 @@ export default function App() {
         {view === 'saved' && (
           <SavedPage
             savedItems={savedItems}
+            likedIds={likedItemIds}
             onToggleSave={handleToggleSave}
+            onToggleLike={handleToggleLikeItem}
             onItemClick={handleOpenDetail}
             onExploreClick={() => setView('home')}
           />
@@ -248,8 +274,10 @@ export default function App() {
                 type: 'destinations',
                 title: activeDestination.name,
                 coverPhoto: activeDestination.cover_photo,
-                daysOfStay: `${activeDestination.typical_days} Days`,
-                budget: `$${activeDestination.avg_budget_tiers.balanced}/day`,
+                daysOfStay: '',
+                budget: activeDestination.ticket_price || (activeDestination.is_free ? 'Free' : 'Free'),
+                ticketPrice: activeDestination.ticket_price || (activeDestination.is_free ? 'Free' : 'Free'),
+                isFree: activeDestination.is_free || (activeDestination.ticket_price?.toLowerCase() === 'free'),
                 rating: activeDestination.rating,
                 reviewsCount: activeDestination.reviews_count,
                 locationName: `${activeDestination.city}, ${activeDestination.country}`,
@@ -260,6 +288,10 @@ export default function App() {
               })
             }
             onPlanTripHere={handlePlanTripHere}
+            onDestinationUpdated={(updated) => {
+              setActiveDestination(updated);
+              setAllPostCards(db.getAllPostCardItems());
+            }}
           />
         )}
 
@@ -303,7 +335,7 @@ export default function App() {
                 daysOfStay: 'Dining',
                 budget: `~${restaurantPriceText(activeRestaurant.price_level, activeRestaurant.avg_budget)}`,
                 rating: activeRestaurant.rating,
-                reviewsCount: activeRestaurant.reviews.length,
+                reviewsCount: activeRestaurant.reviews ? activeRestaurant.reviews.length : 0,
                 locationName: activeRestaurant.destination_name,
                 mapsUrl: activeRestaurant.maps_url,
                 operatingHours: activeRestaurant.operating_hours,
@@ -318,7 +350,7 @@ export default function App() {
           <PlanDetail
             plan={activePlan}
             isSaved={savedIdsSet.has(activePlan.id)}
-            isLiked={likedPlanIds.has(activePlan.id)}
+            isLiked={likedItemIds.has(activePlan.id)}
             onBack={() => setView(previousView || 'home')}
             onToggleSave={() =>
               handleToggleSave({

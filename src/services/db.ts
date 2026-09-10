@@ -7,7 +7,8 @@ import {
   Trip,
   Traveler,
   ItineraryItem,
-  DiscoverablePlace
+  DiscoverablePlace,
+  Review
 } from '../types';
 import {
   INITIAL_DESTINATIONS,
@@ -26,7 +27,8 @@ const STORAGE_KEYS = {
   TRIPS: 'roamio_trips_data',
   SAVES: 'roamio_saved_items',
   LIKES: 'roamio_liked_plans',
-  PLANS: 'roamio_plans_list'
+  PLANS: 'roamio_plans_list',
+  DESTINATION_REVIEWS: 'roamio_dest_reviews'
 };
 
 export interface SavedItemRecord {
@@ -46,7 +48,8 @@ class RoamioDataStore {
   private discoverablePlaces: DiscoverablePlace[] = DISCOVERABLE_PLACES;
   private trips: Trip[] = [];
   private saves: SavedItemRecord[] = [];
-  private likes: string[] = []; // plan IDs liked by current user
+  private likes: string[] = []; // item IDs liked by current user
+  private itemLikesCounts: Record<string, number> = {};
 
   constructor() {
     this.init();
@@ -54,65 +57,150 @@ class RoamioDataStore {
 
   private init() {
     try {
-      // Load user
-      const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-      if (storedUser) {
-        this.currentUser = JSON.parse(storedUser);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Load user
+        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+        if (storedUser) {
+          try {
+            this.currentUser = JSON.parse(storedUser);
+          } catch {
+            this.currentUser = DEMO_USERS[0];
+          }
+        } else {
+          this.currentUser = DEMO_USERS[0];
+          try {
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(this.currentUser));
+          } catch {
+            // Ignore quota / private mode storage error
+          }
+        }
+
+        // Load trips
+        const storedTrips = localStorage.getItem(STORAGE_KEYS.TRIPS);
+        if (storedTrips) {
+          try {
+            const parsed = JSON.parse(storedTrips);
+            this.trips = Array.isArray(parsed) && parsed.length > 0 ? parsed : [this.createDefaultSampleTrip()];
+          } catch {
+            this.trips = [this.createDefaultSampleTrip()];
+          }
+        } else {
+          this.trips = [this.createDefaultSampleTrip()];
+          try {
+            localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+          } catch {
+            // Ignore storage error
+          }
+        }
+
+        // Load saves
+        const storedSaves = localStorage.getItem(STORAGE_KEYS.SAVES);
+        if (storedSaves) {
+          try {
+            const parsed = JSON.parse(storedSaves);
+            this.saves = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            this.saves = [];
+          }
+        } else {
+          this.saves = [
+            {
+              id: 'save-1',
+              userId: this.currentUser?.id || 'user-alex',
+              itemId: 'dest-kyoto',
+              itemType: 'destinations',
+              savedAt: new Date().toISOString()
+            },
+            {
+              id: 'save-2',
+              userId: this.currentUser?.id || 'user-alex',
+              itemId: 'plan-kyoto-5d',
+              itemType: 'plans',
+              savedAt: new Date().toISOString()
+            }
+          ];
+          try {
+            localStorage.setItem(STORAGE_KEYS.SAVES, JSON.stringify(this.saves));
+          } catch {
+            // Ignore storage error
+          }
+        }
+
+        // Load likes
+        const storedLikes = localStorage.getItem(STORAGE_KEYS.LIKES);
+        if (storedLikes) {
+          try {
+            const parsed = JSON.parse(storedLikes);
+            this.likes = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            this.likes = [];
+          }
+        }
+
+        // Load custom item likes counts
+        const storedItemLikes = localStorage.getItem('roamio_item_likes_counts');
+        if (storedItemLikes) {
+          try {
+            this.itemLikesCounts = JSON.parse(storedItemLikes);
+          } catch {
+            this.itemLikesCounts = {};
+          }
+        }
+
+        // Load custom plans if any
+        const storedPlans = localStorage.getItem(STORAGE_KEYS.PLANS);
+        if (storedPlans) {
+          try {
+            const parsed = JSON.parse(storedPlans);
+            this.plans = Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_PLANS;
+          } catch {
+            this.plans = INITIAL_PLANS;
+          }
+        }
+
+        // Load stored destination reviews if any
+        const storedDestReviews = localStorage.getItem(STORAGE_KEYS.DESTINATION_REVIEWS);
+        if (storedDestReviews) {
+          try {
+            const reviewsMap: Record<string, any[]> = JSON.parse(storedDestReviews);
+            Object.keys(reviewsMap).forEach((destId) => {
+              const dest = this.destinations.find((d) => d.id === destId);
+              if (dest && Array.isArray(reviewsMap[destId]) && reviewsMap[destId].length > 0) {
+                dest.reviews = reviewsMap[destId];
+                dest.reviews_count = dest.reviews.length;
+                const total = dest.reviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0);
+                dest.rating = Number((total / dest.reviews.length).toFixed(2));
+              }
+            });
+          } catch {
+            // Ignore parse error
+          }
+        }
       } else {
-        // Default to demo user for frictionless review
+        // Fallback when localStorage is not available
         this.currentUser = DEMO_USERS[0];
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(this.currentUser));
-      }
-
-      // Load trips
-      const storedTrips = localStorage.getItem(STORAGE_KEYS.TRIPS);
-      if (storedTrips) {
-        this.trips = JSON.parse(storedTrips);
-      } else {
-        // Seed default initial user trip from Kyoto
-        const sampleTrip = this.createDefaultSampleTrip();
-        this.trips = [sampleTrip];
-        localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
-      }
-
-      // Load saves
-      const storedSaves = localStorage.getItem(STORAGE_KEYS.SAVES);
-      if (storedSaves) {
-        this.saves = JSON.parse(storedSaves);
-      } else {
-        // Pre-save a couple items for immediate delight
+        this.trips = [this.createDefaultSampleTrip()];
         this.saves = [
           {
             id: 'save-1',
-            userId: this.currentUser?.id || 'user-alex',
+            userId: 'user-alex',
             itemId: 'dest-kyoto',
             itemType: 'destinations',
             savedAt: new Date().toISOString()
           },
           {
             id: 'save-2',
-            userId: this.currentUser?.id || 'user-alex',
+            userId: 'user-alex',
             itemId: 'plan-kyoto-5d',
             itemType: 'plans',
             savedAt: new Date().toISOString()
           }
         ];
-        localStorage.setItem(STORAGE_KEYS.SAVES, JSON.stringify(this.saves));
-      }
-
-      // Load likes
-      const storedLikes = localStorage.getItem(STORAGE_KEYS.LIKES);
-      if (storedLikes) {
-        this.likes = JSON.parse(storedLikes);
-      }
-
-      // Load custom plans if any
-      const storedPlans = localStorage.getItem(STORAGE_KEYS.PLANS);
-      if (storedPlans) {
-        this.plans = JSON.parse(storedPlans);
       }
     } catch (err) {
       console.warn('Error loading localStorage data:', err);
+      this.currentUser = DEMO_USERS[0];
+      this.trips = [this.createDefaultSampleTrip()];
     }
   }
 
@@ -269,20 +357,55 @@ class RoamioDataStore {
   }
 
   // --- PostCard Items & Saved Queries ---
+  getItemLikesCount(itemId: string, fallback: number = 850): number {
+    if (this.itemLikesCounts[itemId] !== undefined) {
+      return this.itemLikesCounts[itemId];
+    }
+    // Baseline likes count based on specific presets or calculation
+    const presets: Record<string, number> = {
+      'dest-klcc-park': 3840,
+      'dest-kyoto': 2480,
+      'dest-paris': 3120,
+      'dest-rome': 2890,
+      'dest-tokyo': 3740,
+      'dest-bali': 2150,
+      'dest-santorini': 2630,
+      'hotel-kyoto-1': 1140,
+      'hotel-kyoto-2': 890,
+      'hotel-paris-1': 1420,
+      'hotel-paris-2': 980,
+      'rest-kyoto-1': 1250,
+      'rest-kyoto-2': 820,
+      'rest-kyoto-3': 910,
+      'rest-paris-1': 1360,
+      'plan-1': 1420,
+      'plan-2': 890,
+      'plan-3': 1120
+    };
+    if (presets[itemId]) {
+      this.itemLikesCounts[itemId] = presets[itemId];
+      return presets[itemId];
+    }
+    this.itemLikesCounts[itemId] = fallback;
+    return fallback;
+  }
+
   getAllPostCardItems(): PostCardItem[] {
     const destItems: PostCardItem[] = this.destinations.map(d => ({
       id: d.id,
       type: 'destinations',
       title: d.name,
       coverPhoto: d.cover_photo,
-      daysOfStay: `${d.typical_days} Days`,
-      budget: `$${d.avg_budget_tiers.balanced}/day`,
+      daysOfStay: '',
+      budget: d.ticket_price || (d.is_free ? 'Free' : 'Free'),
+      ticketPrice: d.ticket_price || (d.is_free ? 'Free' : 'Free'),
+      isFree: d.is_free || (d.ticket_price?.toLowerCase() === 'free'),
       rating: d.rating,
       reviewsCount: d.reviews_count,
       locationName: `${d.city}, ${d.country}`,
       mapsUrl: d.maps_url,
       operatingHours: d.operating_hours,
-      energyLevel: d.energy_level,
+      likesCount: this.getItemLikesCount(d.id, Math.round((d.reviews_count || 500) * 1.6)),
       subtitle: d.short_description
     }));
 
@@ -298,6 +421,7 @@ class RoamioDataStore {
       locationName: h.destination_name,
       mapsUrl: h.maps_url,
       operatingHours: h.operating_hours,
+      likesCount: this.getItemLikesCount(h.id, Math.round((h.reviews_count || 300) * 1.3)),
       subtitle: h.room_types.join(', ')
     }));
 
@@ -309,10 +433,11 @@ class RoamioDataStore {
       daysOfStay: 'Dining',
       budget: `~${r.price_level} ($${r.avg_budget})`,
       rating: r.rating,
-      reviewsCount: r.reviews.length,
+      reviewsCount: r.reviews ? r.reviews.length : 0,
       locationName: r.destination_name,
       mapsUrl: r.maps_url,
       operatingHours: r.operating_hours,
+      likesCount: this.getItemLikesCount(r.id, 650 + (r.reviews ? r.reviews.length * 110 : 0)),
       subtitle: `${r.cuisine} • ${r.price_level}`
     }));
 
@@ -328,6 +453,7 @@ class RoamioDataStore {
       mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.destination_name)}`,
       authorName: p.author_name,
       authorAvatar: p.author_avatar,
+      likesCount: this.getItemLikesCount(p.id, p.likes || 890),
       subtitle: p.description
     }));
 
@@ -336,7 +462,8 @@ class RoamioDataStore {
 
   getSavedItems(): PostCardItem[] {
     const all = this.getAllPostCardItems();
-    const savedIds = new Set(this.saves.map(s => s.itemId));
+    const savesList = Array.isArray(this.saves) ? this.saves : [];
+    const savedIds = new Set(savesList.map(s => s.itemId));
     return all.filter(item => savedIds.has(item.id));
   }
 
@@ -352,6 +479,58 @@ class RoamioDataStore {
 
   getDestinationById(id: string): Destination | undefined {
     return this.destinations.find(d => d.id === id);
+  }
+
+  addDestinationReview(
+    destinationId: string,
+    reviewData: {
+      user?: string;
+      avatar?: string;
+      rating: number;
+      comment: string;
+    }
+  ): Destination | undefined {
+    const dest = this.destinations.find(d => d.id === destinationId);
+    if (!dest) return undefined;
+
+    const current = this.currentUser;
+    const authorName = (reviewData.user && reviewData.user.trim()) || current?.name || 'Traveler';
+    const authorAvatar = reviewData.avatar || current?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(authorName)}`;
+
+    const newReview: Review = {
+      id: `rev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      user: authorName,
+      avatar: authorAvatar,
+      rating: Math.max(1, Math.min(5, Math.round(Number(reviewData.rating) || 5))),
+      date: 'Just now',
+      comment: reviewData.comment.trim()
+    };
+
+    const existingReviews = Array.isArray(dest.reviews) ? dest.reviews : [];
+    dest.reviews = [newReview, ...existingReviews];
+    dest.reviews_count = (dest.reviews_count || existingReviews.length) + 1;
+    
+    // Recalculate average rating
+    const totalScore = dest.reviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0);
+    dest.rating = Number((totalScore / dest.reviews.length).toFixed(2));
+
+    this.saveDestinationReviewsToStorage();
+    return { ...dest };
+  }
+
+  private saveDestinationReviewsToStorage(): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const reviewsMap: Record<string, Review[]> = {};
+      this.destinations.forEach(d => {
+        if (d.reviews && d.reviews.length > 0) {
+          reviewsMap[d.id] = d.reviews;
+        }
+      });
+      localStorage.setItem(STORAGE_KEYS.DESTINATION_REVIEWS, JSON.stringify(reviewsMap));
+    } catch {
+      // Ignore storage error
+    }
   }
 
   getHotels(destinationId?: string): Hotel[] {
@@ -413,32 +592,47 @@ class RoamioDataStore {
     return [...this.saves];
   }
 
-  isLiked(planId: string): boolean {
-    return this.likes.includes(planId);
+  isLiked(itemId: string): boolean {
+    return this.likes.includes(itemId);
   }
 
-  toggleLike(planId: string): { liked: boolean; count: number } {
-    const plan = this.plans.find(p => p.id === planId);
-    const isCurrentlyLiked = this.likes.includes(planId);
+  toggleLike(itemId: string): { liked: boolean; count: number } {
+    const isCurrentlyLiked = this.likes.includes(itemId);
     let liked = false;
+    const currentCount = this.getItemLikesCount(itemId);
 
     if (isCurrentlyLiked) {
-      this.likes = this.likes.filter(id => id !== planId);
-      if (plan) plan.likes = Math.max(0, plan.likes - 1);
+      this.likes = this.likes.filter(id => id !== itemId);
+      this.itemLikesCounts[itemId] = Math.max(0, currentCount - 1);
       liked = false;
     } else {
-      this.likes.push(planId);
-      if (plan) plan.likes += 1;
+      this.likes.push(itemId);
+      this.itemLikesCounts[itemId] = currentCount + 1;
       liked = true;
     }
 
-    localStorage.setItem(STORAGE_KEYS.LIKES, JSON.stringify(this.likes));
-    localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(this.plans));
-    return { liked, count: plan ? plan.likes : 0 };
+    // Keep plan in sync if it's a plan
+    const plan = this.plans.find(p => p.id === itemId);
+    if (plan) {
+      plan.likes = this.itemLikesCounts[itemId];
+      try {
+        localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(this.plans));
+      } catch {}
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.LIKES, JSON.stringify(this.likes));
+      localStorage.setItem('roamio_item_likes_counts', JSON.stringify(this.itemLikesCounts));
+    } catch {}
+
+    return { liked, count: this.itemLikesCounts[itemId] };
   }
 
   // --- Trips & Itinerary ---
   getTrips(): Trip[] {
+    if (!this.trips || this.trips.length === 0) {
+      this.trips = [this.createDefaultSampleTrip()];
+    }
     return [...this.trips];
   }
 
@@ -447,18 +641,38 @@ class RoamioDataStore {
   }
 
   saveTrip(trip: Trip): void {
+    if (!trip) return;
+    if (!Array.isArray(this.trips)) {
+      this.trips = [];
+    }
     const index = this.trips.findIndex(t => t.id === trip.id);
     if (index >= 0) {
       this.trips[index] = trip;
     } else {
       this.trips.unshift(trip);
     }
-    localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+      }
+    } catch {
+      // Ignore storage errors
+    }
   }
 
-  deleteTrip(tripId: string): void {
+  deleteTrip(tripId: string): Trip[] {
     this.trips = this.trips.filter(t => t.id !== tripId);
-    localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    if (this.trips.length === 0) {
+      this.trips = [this.createDefaultSampleTrip()];
+    }
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+      }
+    } catch {
+      // Ignore
+    }
+    return [...this.trips];
   }
 
   updateTripPackingChecklist(tripId: string, checklist: { id: string; text: string; completed: boolean }[]): void {
@@ -475,23 +689,32 @@ class RoamioDataStore {
     days: number,
     travelers: Traveler[]
   ): ItineraryItem[] {
-    const places = this.getDiscoverablePlaces(destinationId);
-    const destination = this.getDestinationById(destinationId);
+    const rawPlaces = this.getDiscoverablePlaces(destinationId);
+    const places = rawPlaces && rawPlaces.length > 0 ? rawPlaces : this.getDiscoverablePlaces('dest-kyoto');
+    const destination = this.getDestinationById(destinationId) || this.getDestinationById('dest-kyoto');
     const destName = destination ? destination.name : 'Destination';
 
     const items: ItineraryItem[] = [];
 
     // Traveler interests for weighting
     const allInterests = new Set<string>();
-    travelers.forEach(t => t.interests.forEach(i => allInterests.add(i.toLowerCase())));
+    (travelers || []).forEach(t => (t?.interests || []).forEach(i => allInterests.add(i.toLowerCase())));
 
-    // Candidate pools
-    const attractions = places.filter(p => !p.is_meal && (p.category === 'Attraction' || p.category === 'Suggested' || p.category === 'Culture' || p.category === 'Nature'));
-    const lunches = places.filter(p => p.is_meal === 'lunch' || (p.category === 'Food & Drink' && p.avg_duration_mins <= 90));
-    const dinners = places.filter(p => p.is_meal === 'dinner' || p.category === 'Food & Drink');
-    const eveningNights = places.filter(p => p.category === 'Nightlife' || p.category === 'Relaxation');
+    // Candidate pools with guaranteed non-empty fallbacks
+    const rawAttractions = places.filter(p => !p.is_meal && (p.category === 'Attraction' || p.category === 'Suggested' || p.category === 'Culture' || p.category === 'Nature'));
+    const attractions = rawAttractions.length > 0 ? rawAttractions : places;
 
-    for (let day = 0; day < days; day++) {
+    const rawLunches = places.filter(p => p.is_meal === 'lunch' || (p.category === 'Food & Drink' && p.avg_duration_mins <= 90));
+    const lunches = rawLunches.length > 0 ? rawLunches : places;
+
+    const rawDinners = places.filter(p => p.is_meal === 'dinner' || p.category === 'Food & Drink');
+    const dinners = rawDinners.length > 0 ? rawDinners : places;
+
+    const rawEvenings = places.filter(p => p.category === 'Nightlife' || p.category === 'Relaxation');
+    const eveningNights = rawEvenings.length > 0 ? rawEvenings : places;
+
+    const safeDays = Math.max(1, days || 1);
+    for (let day = 0; day < safeDays; day++) {
       // 1. Morning activity (09:00 - 11:30 snapped to 15m)
       const morningPlace = attractions[(day * 2) % attractions.length] || places[0];
       const morningStart = '09:00';

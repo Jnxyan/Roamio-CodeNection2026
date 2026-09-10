@@ -28,21 +28,23 @@ interface MyPlansPageProps {
 }
 
 export const MyPlansPage: React.FC<MyPlansPageProps> = ({
-  trips,
+  trips = [],
   onOpenTrip,
   onCreateNew,
   onDeleteTrip
 }) => {
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(trips[0] || null);
+  const safeTrips = Array.isArray(trips) ? trips : [];
+  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(safeTrips[0] || null);
   const [newChecklistText, setNewChecklistText] = useState('');
 
   // Keep selected trip in sync with changes
-  const activeTrip = trips.find(t => t.id === selectedTrip?.id) || trips[0] || null;
+  const activeTrip = safeTrips.find(t => t.id === selectedTrip?.id) || safeTrips[0] || null;
 
   // Toggle packing checklist item
   const handleToggleChecklist = (tripId: string, itemId: string) => {
     if (!activeTrip) return;
-    const updatedChecklist = activeTrip.packing_checklist.map(item =>
+    const currentList = activeTrip.packing_checklist || [];
+    const updatedChecklist = currentList.map(item =>
       item.id === itemId ? { ...item, completed: !item.completed } : item
     );
     const updatedTrip = { ...activeTrip, packing_checklist: updatedChecklist };
@@ -58,9 +60,10 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
       text: newChecklistText.trim(),
       completed: false
     };
+    const currentList = activeTrip.packing_checklist || [];
     const updatedTrip = {
       ...activeTrip,
-      packing_checklist: [...activeTrip.packing_checklist, newItem]
+      packing_checklist: [...currentList, newItem]
     };
     db.saveTrip(updatedTrip);
     setSelectedTrip(updatedTrip);
@@ -70,11 +73,11 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
   // Calculate budget vs actual spend
   const estimatedActualSpend = activeTrip
     ? (activeTrip.combined_package?.total_combined_price || 0) +
-      activeTrip.days * (activeTrip.budget_amount || 150)
+      (activeTrip.days || 1) * (activeTrip.budget_amount || 150)
     : 0;
 
   const targetBudget = activeTrip
-    ? activeTrip.days * (activeTrip.budget_amount || 150) * (activeTrip.travelers?.length || 1)
+    ? (activeTrip.days || 1) * (activeTrip.budget_amount || 150) * (activeTrip.travelers?.length || 1)
     : 0;
 
   const isOverBudget = estimatedActualSpend > targetBudget && targetBudget > 0;
@@ -103,7 +106,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
         </button>
       </div>
 
-      {trips.length === 0 ? (
+      {safeTrips.length === 0 ? (
         <div className="text-center py-20 px-4 bg-white rounded-3xl border border-[#D9CFC2] max-w-md mx-auto">
           <div className="w-14 h-14 rounded-2xl bg-[#0EA5A5]/10 text-[#0EA5A5] flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-7 h-7" />
@@ -125,10 +128,10 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
           {/* Left Column: Trip Selector Cards */}
           <div className="lg:col-span-4 space-y-3">
             <h3 className="text-xs font-bold text-[#374151] uppercase tracking-wider mb-2">
-              Saved Trips ({trips.length})
+              Saved Trips ({safeTrips.length})
             </h3>
 
-            {trips.map(trip => (
+            {safeTrips.map(trip => (
               <div
                 key={trip.id}
                 onClick={() => setSelectedTrip(trip)}
@@ -141,7 +144,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0EA5A5]/10 text-[#086666]">
-                      {trip.days} Days • {trip.destinations[0]}
+                      {trip.days} Days • {(trip.destinations || [])[0] || 'Destination'}
                     </span>
                     <h4 className="text-sm font-bold text-[#1F2937] mt-1.5 line-clamp-1">
                       {trip.title}
@@ -285,8 +288,8 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {Array.from({ length: activeTrip.days }).map((_, dIdx) => {
-                      const dayItems = activeTrip.itinerary.filter(i => i.day_index === dIdx);
+                    {Array.from({ length: activeTrip.days || 1 }).map((_, dIdx) => {
+                      const dayItems = (activeTrip.itinerary || []).filter(i => i.day_index === dIdx);
                       return (
                         <div key={dIdx} className="rounded-2xl border border-[#D9CFC2] overflow-hidden">
                           <div className="bg-[#FBF7F2] px-4 py-2.5 border-b border-[#D9CFC2] flex items-center justify-between">
@@ -411,7 +414,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                 </h3>
 
                 <div className="space-y-2">
-                  {activeTrip.packing_checklist.map(item => (
+                  {(activeTrip.packing_checklist || []).map(item => (
                     <div
                       key={item.id}
                       onClick={() => handleToggleChecklist(activeTrip.id, item.id)}
@@ -459,7 +462,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                   <span>Cautions & Trip Reminders</span>
                 </h3>
                 <ul className="space-y-1.5 text-xs text-[#374151]">
-                  {activeTrip.cautions.map((c, i) => (
+                  {(activeTrip.cautions || []).map((c, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="text-amber-600 font-bold">•</span>
                       <span>{c}</span>

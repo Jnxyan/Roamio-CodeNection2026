@@ -2,11 +2,58 @@ import { Destination, Hotel, Restaurant, Plan, DiscoverablePlace } from '../type
 
 export const INITIAL_DESTINATIONS: Destination[] = [
   {
+    id: 'dest-klcc-park',
+    name: 'KLCC Park & Lake Symphony',
+    country: 'Malaysia',
+    city: 'Kuala Lumpur',
+    short_description: 'A 50-acre tropical urban oasis nestled at the base of the iconic Petronas Twin Towers, featuring a 10,000 sqm man-made Lake Symphony with musical fountains, lush foliage, a children’s wading pool, and a 1.3km cushioned jogging track.',
+    cover_photo: 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1541417904950-b855846fe074?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1574972413156-f0ca37330d8c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1583037189850-1921ae7c6c22?auto=format&fit=crop&w=1200&q=80'
+    ],
+    rating: 4.91,
+    reviews_count: 2480,
+    energy_level: 2,
+    ticket_price: 'Free',
+    is_free: true,
+    typical_visit_time: '1–2 hours',
+    activities: [
+      'Lake Symphony Musical Fountain Water Show (Evening)',
+      'Petronas Twin Towers Vantage Point Photo Walk',
+      '1.3km Shaded Jogging & Walking Circuit',
+      'Children’s Public Water Play Park & Wading Pool',
+      'Suria KLCC Esplanade Stroll & Cafes'
+    ],
+    operating_hours: 'Daily: 07:00 – 22:00 | Lake Symphony Shows: 20:00, 21:00 & 21:45',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=KLCC+Park+Kuala+Lumpur+Malaysia',
+    reviews: [
+      {
+        id: 'rev-klcc-1',
+        user: 'Ahmad Farhan',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: 'Free admission with the best vantage point for photos of the Petronas Twin Towers! Come at 8pm to catch the magical fountain light show.'
+      },
+      {
+        id: 'rev-klcc-2',
+        user: 'Rachel Tan',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 month ago',
+        comment: 'Beautiful green respite in the middle of bustling Kuala Lumpur. The cushioned running track is super gentle on knees.'
+      }
+    ]
+  },
+  {
     id: 'dest-kyoto',
-    name: 'Kyoto Cultural Immersion',
+    name: 'Fushimi Inari Shrine & Senbon Torii',
     country: 'Japan',
     city: 'Kyoto',
-    short_description: 'Ancient imperial capital steeped in thousand-year-old wooden shrines, bamboo groves, zen moss gardens, and tea ceremony traditions.',
+    short_description: 'Sacred Shinto mountain shrine world-famous for its endless tunnel of over 10,000 vibrant vermilion torii gates winding through tranquil cedar forests of Mount Inari.',
     cover_photo: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80',
@@ -17,38 +64,18 @@ export const INITIAL_DESTINATIONS: Destination[] = [
     rating: 4.92,
     reviews_count: 1420,
     energy_level: 3,
+    ticket_price: 'Free',
+    is_free: true,
+    typical_visit_time: '2–3 hours',
     activities: [
-      'Zen Meditation & Temple Walking',
-      'Traditional Matcha Tea Ritual',
-      'Arashiyama Sagano Bamboo Path',
-      'Gion Geisha District Evening Tour',
-      'Nishiki Market Street Food Tasting'
+      'Senbon Torii Vermilion Gate Pilgrimage Walk',
+      'Mount Inari Forest Summit Hike',
+      'Fox Statue (Kitsune) Cultural Photography',
+      'Traditional Omikuji Fortune & Fox Ema Tablets',
+      'Approach Street Food & Inari Sushi Tasting'
     ],
-    operating_hours: 'Temples: 08:30 – 17:00 | Shrines: Open 24 Hours | Transit: 05:30 – 23:45',
-    maps_url: 'https://www.google.com/maps/search/?api=1&query=Kyoto+Japan',
-    avg_budget_tiers: {
-      backpacker: 65,
-      balanced: 175,
-      luxury: 480
-    },
-    typical_days: 5,
-    itinerary_example: [
-      {
-        day: 1,
-        title: 'Historic Eastern Shrines & Gion Evening',
-        highlights: ['Fushimi Inari vermillion gates at dawn', 'Kiyomizu-dera wooden stage panorama', 'Lantern-lit stroll along Hanamikoji street']
-      },
-      {
-        day: 2,
-        title: 'Bamboo Forests & Zen Rock Gardens',
-        highlights: ['Arashiyama early morning bamboo path', 'Tenryu-ji landscape pond', 'Ryoan-ji dry stone contemplation']
-      },
-      {
-        day: 3,
-        title: 'Golden Pavilion & Culinary Discovery',
-        highlights: ['Kinkaku-ji reflection in Mirror Pond', 'Nishiki Market 100-vendor tasting', 'Pontocho canal dinner']
-      }
-    ],
+    operating_hours: 'Open 24 Hours Daily (Grounds & Torii Gates are always accessible)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Fushimi+Inari+Taisha+Kyoto+Japan',
     reviews: [
       {
         id: 'rev-1',
@@ -56,7 +83,7 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '3 weeks ago',
-        comment: 'Waking up early for Fushimi Inari was life-changing. The city balances ancient peace with ultra-convenient transport.'
+        comment: 'Completely free to enter and explore. Waking up early at dawn was life-changing before the crowds arrived.'
       },
       {
         id: 'rev-2',
@@ -64,16 +91,16 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '1 month ago',
-        comment: 'The food scene in Kyoto is peerless. Don’t miss the tofu hotpots and matcha soba noodles.'
+        comment: 'The vermilion path against the deep green mountain forest is pure magic. Don’t stop at the first fork, hike up higher for peace.'
       }
     ]
   },
   {
     id: 'dest-paris',
-    name: 'Romantic Paris & Seine Architecture',
+    name: 'The Louvre Museum & Glass Pyramid',
     country: 'France',
     city: 'Paris',
-    short_description: 'World capital of art, gastronomy, and Haussmannian boulevards, featuring world-class museums, cafe terraces, and riverside promenades.',
+    short_description: 'The world’s most visited art museum, housed in a historic royal palace beside the Seine, home to the Mona Lisa, Venus de Milo, and Winged Victory.',
     cover_photo: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
@@ -84,38 +111,18 @@ export const INITIAL_DESTINATIONS: Destination[] = [
     rating: 4.88,
     reviews_count: 2890,
     energy_level: 4,
+    ticket_price: '$24',
+    is_free: false,
+    typical_visit_time: '3–4 hours',
     activities: [
-      'Louvre & Musée d’Orsay Masterpieces',
-      'Sunset Cruise on the River Seine',
-      'Montmartre Artists Square & Sacré-Cœur',
-      'Pâtisserie Crawl through Saint-Germain',
-      'Rooftop Views from Arc de Triomphe'
+      'Mona Lisa & Renaissance Masterpieces Viewing',
+      'I.M. Pei Glass Pyramid Courtyard Photography',
+      'Winged Victory of Samothrace Grand Staircase',
+      'Napoleon III Grand State Apartments',
+      'Tuileries Garden Afternoon Stroll'
     ],
-    operating_hours: 'Museums: 09:00 – 18:00 (Wed/Fri late to 21:45) | Cafes: 07:00 – 01:00',
-    maps_url: 'https://www.google.com/maps/search/?api=1&query=Paris+France',
-    avg_budget_tiers: {
-      backpacker: 85,
-      balanced: 230,
-      luxury: 620
-    },
-    typical_days: 6,
-    itinerary_example: [
-      {
-        day: 1,
-        title: 'The Grand Louvre & Tuileries Garden',
-        highlights: ['Mona Lisa & Winged Victory', 'Angelina hot chocolate', 'Seine twilight walk']
-      },
-      {
-        day: 2,
-        title: 'Montmartre Bohemian Vibe',
-        highlights: ['Sacré-Cœur panorama', 'Place du Tertre painters', 'Moulin Rouge photo']
-      },
-      {
-        day: 3,
-        title: 'Left Bank Literary & Notre-Dame',
-        highlights: ['Shakespeare and Company', 'Latin Quarter bistro lunch', 'Sainte-Chapelle stained glass']
-      }
-    ],
+    operating_hours: '09:00 – 18:00 (Wed & Fri extended to 21:45 | Closed Tuesdays)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Louvre+Museum+Paris+France',
     reviews: [
       {
         id: 'rev-p1',
@@ -123,16 +130,16 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '2 weeks ago',
-        comment: 'Paris rewards wandering on foot without rushing. Get the museum pass early!'
+        comment: 'Book timed-entry tickets online in advance! The Egyptian wing and French Romantic paintings are breathtaking.'
       }
     ]
   },
   {
     id: 'dest-rome',
-    name: 'Eternal Rome & Ancient Wonders',
+    name: 'The Colosseum & Roman Forum',
     country: 'Italy',
     city: 'Rome',
-    short_description: 'An open-air living museum where monumental Colosseum arches, baroque fountains, and candlelit Trastevere trattorias blend seamlessly.',
+    short_description: 'The monumental 2,000-year-old Flavian Amphitheatre of gladiatorial combat, paired with the sprawling archaeological ruins of the ancient Roman Republic.',
     cover_photo: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80',
@@ -142,27 +149,17 @@ export const INITIAL_DESTINATIONS: Destination[] = [
     rating: 4.89,
     reviews_count: 1980,
     energy_level: 4,
+    ticket_price: '$20',
+    is_free: false,
+    typical_visit_time: '3 hours',
     activities: [
-      'Colosseum & Roman Forum Archaeological Walk',
-      'Vatican Museums & Sistine Chapel',
-      'Trevi Fountain Night Wish & Gelato',
-      'Trastevere Evening Food & Wine Walking Tour'
+      'Colosseum Arena Floor & Underground Dungeons',
+      'Roman Forum Imperial Temples Walking Tour',
+      'Palatine Hill Panoramic Views of Rome',
+      'Arch of Constantine Historical Walk'
     ],
-    operating_hours: 'Historical Sites: 09:00 – 19:15 | Restaurants: 12:30 – 15:00, 19:30 – 23:30',
-    maps_url: 'https://www.google.com/maps/search/?api=1&query=Rome+Italy',
-    avg_budget_tiers: {
-      backpacker: 70,
-      balanced: 195,
-      luxury: 510
-    },
-    typical_days: 4,
-    itinerary_example: [
-      {
-        day: 1,
-        title: 'Imperial Rome and Ancient Forum',
-        highlights: ['Colosseum floor access', 'Palatine Hill imperial palaces', 'Piazza Navona espresso']
-      }
-    ],
+    operating_hours: 'Daily: 09:00 – 19:15 (Last entry 1 hour before sunset)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Colosseum+Rome+Italy',
     reviews: [
       {
         id: 'rev-r1',
@@ -170,16 +167,16 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '1 month ago',
-        comment: 'The history at every street corner is breathtaking. Cacio e pepe in Trastevere was unbelievable.'
+        comment: 'Standing on the arena floor looking up at the tiers gave me goosebumps. Ticket includes Roman Forum and Palatine Hill.'
       }
     ]
   },
   {
     id: 'dest-bali',
-    name: 'Tropical Bali: Ubud & Coastlines',
+    name: 'Tegallalang Rice Terrace & Valley',
     country: 'Indonesia',
     city: 'Bali',
-    short_description: 'Island of the Gods featuring lush terraced rice paddies, spiritual water temples, jungle waterfall hikes, and surf breaks.',
+    short_description: 'Iconic emerald terraced rice paddies cascading down the river valley near Ubud, utilizing the ancient Balinese Subak cooperative irrigation system.',
     cover_photo: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=80',
@@ -188,28 +185,18 @@ export const INITIAL_DESTINATIONS: Destination[] = [
     ],
     rating: 4.84,
     reviews_count: 1720,
-    energy_level: 2,
+    energy_level: 3,
+    ticket_price: '$3',
+    is_free: false,
+    typical_visit_time: '2 hours',
     activities: [
-      'Tegallalang Emerald Rice Terrace Sunrise',
-      'Tirta Empul Holy Spring Cleansing Ritual',
-      'Ubud Monkey Forest Sanctuary Walk',
-      'Uluwatu Cliffside Temple & Kecak Fire Dance'
+      'Tegallalang Emerald Rice Terrace Sunrise Walk',
+      'Giant Jungle Valley Swing Adventure',
+      'Subak Irrigation Canal Exploration',
+      'Terrace Edge Bamboo Cafe Coconut Water'
     ],
-    operating_hours: 'Temples: 07:00 – 18:00 | Cafes & Spas: 08:00 – 21:00',
-    maps_url: 'https://www.google.com/maps/search/?api=1&query=Ubud+Bali+Indonesia',
-    avg_budget_tiers: {
-      backpacker: 38,
-      balanced: 110,
-      luxury: 340
-    },
-    typical_days: 7,
-    itinerary_example: [
-      {
-        day: 1,
-        title: 'Spiritual Ubud & Sacred Forest',
-        highlights: ['Morning yoga retreat', 'Tirta Empul cleansing', 'Organic farm cafe lunch']
-      }
-    ],
+    operating_hours: 'Daily: 08:00 – 18:00',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Tegallalang+Rice+Terrace+Ubud+Bali',
     reviews: [
       {
         id: 'rev-b1',
@@ -217,16 +204,16 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '2 months ago',
-        comment: 'So restorative! Renting a private pool villa in Ubud was surprisingly affordable.'
+        comment: 'Only about $3 entry fee and you can wander deep through the palm-shaded terraces.'
       }
     ]
   },
   {
     id: 'dest-barcelona',
-    name: 'Vibrant Barcelona & Gaudí Wonders',
+    name: 'Sagrada Família Basilica',
     country: 'Spain',
     city: 'Barcelona',
-    short_description: 'Sun-drenched Mediterranean city celebrated for modernist architecture, sandy beaches, bustling tapas bars, and the Gothic Quarter.',
+    short_description: 'Antoni Gaudí’s astonishing unfinished masterpiece, blending Gothic geometry and naturalistic Art Nouveau stone carvings with kaleidoscopic stained glass interiors.',
     cover_photo: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=1200&q=80',
@@ -236,27 +223,17 @@ export const INITIAL_DESTINATIONS: Destination[] = [
     rating: 4.87,
     reviews_count: 2110,
     energy_level: 3,
+    ticket_price: '$28',
+    is_free: false,
+    typical_visit_time: '2–3 hours',
     activities: [
-      'Sagrada Família Basilican Architecture Tour',
-      'Park Güell Mosaic Serpent Terrace',
-      'La Boqueria Food Market Tasting',
-      'Barceloneta Beach Sunset Paddle'
+      'Basilica Interior & Stained Glass Natural Light Viewing',
+      'Nativity & Passion Towers Elevator Ascent',
+      'Underground Museum & Gaudí Workshop Crypt',
+      'Plaça de Gaudí Reflection Pond Photography'
     ],
-    operating_hours: 'Attractions: 09:00 – 19:30 | Tapas Bars: 13:00 – 16:00, 20:00 – 01:00',
-    maps_url: 'https://www.google.com/maps/search/?api=1&query=Barcelona+Spain',
-    avg_budget_tiers: {
-      backpacker: 60,
-      balanced: 165,
-      luxury: 440
-    },
-    typical_days: 4,
-    itinerary_example: [
-      {
-        day: 1,
-        title: 'Modernisme Masterpieces',
-        highlights: ['Sagrada Família audio tour', 'Casa Batlló facade', 'Passeig de Gràcia tapas']
-      }
-    ],
+    operating_hours: 'Daily: 09:00 – 19:30 (Sundays 10:30 – 19:30)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Sagrada+Familia+Barcelona+Spain',
     reviews: [
       {
         id: 'rev-bc1',
@@ -270,10 +247,10 @@ export const INITIAL_DESTINATIONS: Destination[] = [
   },
   {
     id: 'dest-banff',
-    name: 'Banff & Canadian Rocky Glaciers',
+    name: 'Banff National Park & Lake Louise',
     country: 'Canada',
     city: 'Banff',
-    short_description: 'Spectacular glacier-fed turquoise lakes, dramatic peaks, wildlife safaris, and cedar alpine chalets inside Canada’s first national park.',
+    short_description: 'Spectacular glacier-fed turquoise lakes, soaring Rocky Mountain peaks, pine forests, and alpine hiking inside Canada’s oldest national park.',
     cover_photo: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
@@ -281,28 +258,18 @@ export const INITIAL_DESTINATIONS: Destination[] = [
     ],
     rating: 4.95,
     reviews_count: 1120,
-    energy_level: 5,
+    energy_level: 4,
+    ticket_price: '$11',
+    is_free: false,
+    typical_visit_time: 'Full Day',
     activities: [
       'Canoeing on Turquoise Lake Louise',
-      'Moraine Lake Valley of the Ten Peaks Hike',
-      'Banff Upper Hot Springs Soak',
-      'Icefields Parkway Glacier Explorer'
+      'Moraine Lake Valley of the Ten Peaks Shoreline',
+      'Lake Agnes Tea House Alpine Trail',
+      'Icefields Parkway Scenic Mountain Drive'
     ],
-    operating_hours: 'National Park: Open 24/7 (Visitor Centre: 08:30 – 19:00)',
+    operating_hours: 'Open 24/7 Daily (Parks Canada Visitor Centre: 08:30 – 19:00)',
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Banff+National+Park+Canada',
-    avg_budget_tiers: {
-      backpacker: 80,
-      balanced: 220,
-      luxury: 550
-    },
-    typical_days: 5,
-    itinerary_example: [
-      {
-        day: 1,
-        title: 'Glacial Lakes & Canoe Excursion',
-        highlights: ['Lake Louise red canoe rental', 'Plain of Six Glaciers teahouse hike']
-      }
-    ],
     reviews: [
       {
         id: 'rev-bf1',
@@ -310,7 +277,7 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '2 months ago',
-        comment: 'Pure wilderness bliss! Moraine lake looks even more vivid in real life than any photograph.'
+        comment: 'Pure wilderness bliss! Moraine lake and Lake Louise look even more vivid in real life than any photograph.'
       }
     ]
   }
