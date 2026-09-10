@@ -36,6 +36,30 @@ export function formatDuration(mins: number): string {
   return `${hours}h ${remaining}m`;
 }
 
+export function formatTime12(timeStr: string): string {
+  if (!timeStr || !timeStr.includes(':')) return timeStr || '09:00 AM';
+  const [hoursStr, minutesStr] = timeStr.split(':');
+  const hours = parseInt(hoursStr, 10) || 0;
+  const minutes = parseInt(minutesStr, 10) || 0;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
+export function formatTimeRange(startStr: string, endStr: string): string {
+  return `${formatTime12(startStr)} – ${formatTime12(endStr)}`;
+}
+
+export function getTimeSlotOptions(intervalMins = 15): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [];
+  for (let m = 0; m < 1440; m += intervalMins) {
+    const time24 = minutesToTime(m);
+    const time12 = formatTime12(time24);
+    options.push({ value: time24, label: `${time12} (${time24})` });
+  }
+  return options;
+}
+
 export function generateTransportEstimate(startMins: number, endMins: number): {
   mode: 'walk' | 'subway' | 'taxi' | 'bus';
   duration_mins: number;

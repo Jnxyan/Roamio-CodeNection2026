@@ -206,6 +206,49 @@ export interface ItineraryItem {
     duration_mins: number;
     detail: string;
   };
+  // Custom activity support
+  is_custom?: boolean;
+  location_name?: string;
+  address?: string;
+  operating_hours?: string;
+  website?: string;
+}
+
+export interface PlanBAlert {
+  id: string;
+  trip_id: string;
+  days_until_trip: number;
+  alert_type: 'weather_rain' | 'attraction_unavailable' | 'schedule_conflict';
+  title: string;
+  description: string;
+  affected_day_index: number;
+  affected_item_id: string;
+  affected_item_name: string;
+  affected_time: string;
+  weather_details?: {
+    forecast: string;
+    precipitation_chance: string;
+    temperature: string;
+  };
+  suggested_plan_b: {
+    place_id: string;
+    place_name: string;
+    category: string;
+    image: string;
+    start_time: string;
+    end_time: string;
+    duration_mins: number;
+    is_indoor: boolean;
+    distance_from_next: string;
+    ticket_cost: string;
+    cost_amount: number;
+    traveler_suitability: string;
+    activity_type: string;
+    reason: string;
+    notes: string;
+    maps_url?: string;
+  };
+  status: 'pending' | 'applied' | 'dismissed';
 }
 
 export interface Trip {
@@ -237,6 +280,8 @@ export interface Trip {
   }[];
   cautions: string[];
   created_at: string;
+  plan_b_alert?: PlanBAlert;
+  simulated_days_until?: number | null;
 }
 
 export interface DiscoverablePlace {
