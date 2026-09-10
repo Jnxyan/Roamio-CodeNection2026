@@ -63,6 +63,16 @@ export default function App() {
     setAllPostCards(db.getAllPostCardItems());
   }, []);
 
+  // Ensure trips are always freshly loaded whenever navigating to 'my-plans'
+  useEffect(() => {
+    if (view === 'my-plans') {
+      const fresh = db.getTrips();
+      if (Array.isArray(fresh)) {
+        setTrips(fresh);
+      }
+    }
+  }, [view]);
+
   // Save/Unsave toggle
   const handleToggleSave = (item: PostCardItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -116,8 +126,9 @@ export default function App() {
 
   // Complete wizard flow
   const handleCompleteWizard = (newTrip: Trip) => {
-    const updatedTrips = db.saveTrip(newTrip);
-    setTrips(updatedTrips);
+    db.saveTrip(newTrip);
+    const freshTrips = db.getTrips();
+    setTrips(freshTrips);
     setActiveTrip(newTrip);
     setWizardPrefillDest(null);
     setWizardPrefillPlan(null);
@@ -126,27 +137,20 @@ export default function App() {
 
   // Update trip from builder
   const handleUpdateTrip = (updatedTrip: Trip) => {
-    const updated = db.saveTrip(updatedTrip);
-    setTrips(updated);
+    db.saveTrip(updatedTrip);
+    const freshTrips = db.getTrips();
+    setTrips(freshTrips);
     setActiveTrip(updatedTrip);
   };
 
   // Delete trip
   const handleDeleteTrip = (tripId: string) => {
     const updated = db.deleteTrip(tripId);
-    const safeUpdated = updated || db.getTrips();
+    const safeUpdated = Array.isArray(updated) ? updated : [];
     setTrips(safeUpdated);
     if (activeTrip?.id === tripId) {
       setActiveTrip(safeUpdated[0] || null);
     }
-  };
-
-  // Add sample trip to My Plans
-  const handleAddSampleTrip = (templateKey?: string) => {
-    const newTrip = db.addSampleTrip(templateKey);
-    const updated = db.getTrips();
-    setTrips(updated);
-    setActiveTrip(newTrip);
   };
 
   // Toggle like on any post item (destinations, hotels, restaurants, plans)
@@ -234,6 +238,7 @@ export default function App() {
         {view === 'my-plans' && (
           <MyPlansPage
             trips={trips}
+            activeTripId={activeTrip?.id}
             onOpenTrip={(trip) => {
               setActiveTrip(trip);
               setView('itinerary');
@@ -265,9 +270,13 @@ export default function App() {
             onSaveTrip={handleUpdateTrip}
             onFinish={(updatedTrip) => {
               handleUpdateTrip(updatedTrip);
+              setTrips(db.getTrips());
               setView('my-plans');
             }}
-            onBack={() => setView('my-plans')}
+            onBack={() => {
+              setTrips(db.getTrips());
+              setView('my-plans');
+            }}
           />
         )}
 
@@ -326,10 +335,6 @@ export default function App() {
                 subtitle: `${activeHotel.room_types.join(', ')}`
               })
             }
-            onHotelUpdated={(updated) => {
-              setActiveHotel(updated);
-              setAllPostCards(db.getAllPostCardItems());
-            }}
           />
         )}
 
@@ -355,10 +360,6 @@ export default function App() {
                 subtitle: `${activeRestaurant.cuisine} • ${activeRestaurant.price_level}`
               })
             }
-            onRestaurantUpdated={(updated) => {
-              setActiveRestaurant(updated);
-              setAllPostCards(db.getAllPostCardItems());
-            }}
           />
         )}
 
@@ -377,8 +378,7 @@ export default function App() {
                 coverPhoto: activePlan.cover_photo,
                 daysOfStay: `${activePlan.days} Days`,
                 budget: `$${activePlan.total_spend.toLocaleString()}`,
-                rating: activePlan.rating || 4.95,
-                reviewsCount: activePlan.reviews_count || (activePlan.reviews ? activePlan.reviews.length : 0),
+                rating: 4.95,
                 locationName: activePlan.destination_name,
                 mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activePlan.destination_name)}`,
                 authorName: activePlan.author_name,
@@ -388,10 +388,6 @@ export default function App() {
             }
             onToggleLike={() => handleToggleLikePlan(activePlan.id)}
             onUseAsTemplate={handleUseAsTemplate}
-            onPlanUpdated={(updated) => {
-              setActivePlan(updated);
-              setAllPostCards(db.getAllPostCardItems());
-            }}
           />
         )}
       </main>

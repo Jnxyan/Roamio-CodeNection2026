@@ -68,7 +68,6 @@ export interface Hotel {
   rating: number;
   reviews_count: number;
   typical_days: number;
-  reviews?: Review[];
 }
 
 export interface Restaurant {
@@ -89,8 +88,14 @@ export interface Restaurant {
     desc: string;
     is_signature?: boolean;
   }[];
-  reviews: Review[];
-  reviews_count?: number;
+  reviews: {
+    id: string;
+    user: string;
+    avatar: string;
+    rating: number;
+    date: string;
+    comment: string;
+  }[];
   avg_duration_mins: number;
 }
 
@@ -104,7 +109,6 @@ export interface Plan {
   destination_id: string;
   destination_name: string;
   cover_photo: string;
-  gallery?: string[];
   days: number;
   total_spend: number;
   spend_breakdown: {
@@ -140,9 +144,6 @@ export interface Plan {
   likes: number;
   saves: number;
   created_at: string;
-  rating?: number;
-  reviews_count?: number;
-  reviews?: Review[];
 }
 
 export interface Traveler {
@@ -153,7 +154,7 @@ export interface Traveler {
 }
 
 export interface FlightOption {
-  id?: string;
+  id: string;
   airline: string;
   flight_no: string;
   departure_airport: string;
@@ -161,30 +162,28 @@ export interface FlightOption {
   departure_time: string;
   arrival_time: string;
   duration: string;
-  stops?: string;
+  stops: string;
   price: number;
   booking_url: string;
 }
 
 export interface HotelOption {
-  id?: string;
+  id: string;
   hotel_name: string;
   room_type: string;
   rating: number;
   price_per_night: number;
   total_hotel_price: number;
   booking_url: string;
-  image?: string;
 }
 
 export interface FlightHotelSuggestion {
-  id?: string;
-  tier_name?: string; // "Great Value", "Most Popular", "Premium Comfort"
+  id: string;
+  tier_name: string; // "Great Value", "Most Popular", "Premium Comfort"
   badge_color?: string;
   flight: FlightOption;
   hotel: HotelOption;
   total_combined_price: number;
-  savings_amount?: number;
 }
 
 export interface ItineraryItem {
@@ -214,52 +213,12 @@ export interface ItineraryItem {
   website?: string;
 }
 
-export interface PlanBAlert {
-  id: string;
-  trip_id: string;
-  days_until_trip: number;
-  alert_type: 'weather_rain' | 'attraction_unavailable' | 'schedule_conflict';
-  title: string;
-  description: string;
-  affected_day_index: number;
-  affected_item_id: string;
-  affected_item_name: string;
-  affected_time: string;
-  weather_details?: {
-    forecast: string;
-    precipitation_chance: string;
-    temperature: string;
-  };
-  suggested_plan_b: {
-    place_id: string;
-    place_name: string;
-    category: string;
-    image: string;
-    start_time: string;
-    end_time: string;
-    duration_mins: number;
-    is_indoor: boolean;
-    distance_from_next: string;
-    ticket_cost: string;
-    cost_amount: number;
-    traveler_suitability: string;
-    activity_type: string;
-    reason: string;
-    notes: string;
-    maps_url?: string;
-  };
-  status: 'pending' | 'applied' | 'dismissed';
-}
-
 export interface Trip {
   id: string;
   user_id: string;
   title: string;
-  cover_photo?: string;
-  gallery?: string[];
-  description?: string;
   origin: {
-    country?: string;
+    country: string;
     city: string;
   };
   destinations: string[]; // destination names or IDs
@@ -280,8 +239,6 @@ export interface Trip {
   }[];
   cautions: string[];
   created_at: string;
-  plan_b_alert?: PlanBAlert;
-  simulated_days_until?: number | null;
 }
 
 export interface DiscoverablePlace {

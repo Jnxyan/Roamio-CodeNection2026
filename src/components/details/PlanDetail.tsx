@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plan } from '../../types';
 import {
   ArrowLeft,
@@ -7,16 +7,15 @@ import {
   Bookmark,
   Copy,
   Plane,
+  Clock,
+  MapPin,
+  ExternalLink,
   ShieldCheck,
   CheckSquare,
   AlertTriangle,
   Sparkles,
-  DollarSign,
-  Star,
-  Camera
+  DollarSign
 } from 'lucide-react';
-import { db } from '../../services/db';
-import { ReviewSection } from './ReviewSection';
 
 interface PlanDetailProps {
   plan: Plan;
@@ -26,7 +25,6 @@ interface PlanDetailProps {
   onToggleSave: () => void;
   onToggleLike: () => void;
   onUseAsTemplate: (plan: Plan) => void;
-  onPlanUpdated?: (updated: Plan) => void;
 }
 
 export const PlanDetail: React.FC<PlanDetailProps> = ({
@@ -36,38 +34,9 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
   onBack,
   onToggleSave,
   onToggleLike,
-  onUseAsTemplate,
-  onPlanUpdated
+  onUseAsTemplate
 }) => {
-  const [currentPlan, setCurrentPlan] = useState<Plan>(plan);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    setCurrentPlan(plan);
-  }, [plan]);
-
-  const galleryImages = (currentPlan.gallery && currentPlan.gallery.length > 0)
-    ? currentPlan.gallery
-    : [currentPlan.cover_photo];
-  const [selectedPhoto, setSelectedPhoto] = useState<string>(galleryImages[0] || currentPlan.cover_photo);
-
-  useEffect(() => {
-    const imgs = (currentPlan.gallery && currentPlan.gallery.length > 0)
-      ? currentPlan.gallery
-      : [currentPlan.cover_photo];
-    setSelectedPhoto(imgs[0] || currentPlan.cover_photo);
-  }, [currentPlan]);
-
-  const handleReviewSubmit = (reviewData: { user: string; rating: number; comment: string }) => {
-    const updated = db.addPlanReview(currentPlan.id, reviewData);
-    if (updated) {
-      setCurrentPlan(updated);
-      if (onPlanUpdated) onPlanUpdated(updated);
-    }
-  };
-
-  const reviewsList = currentPlan.reviews || [];
-  const reviewsCount = currentPlan.reviews_count || reviewsList.length;
 
   const handleShare = () => {
     if (navigator.clipboard) {
@@ -78,12 +47,12 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
   };
 
   const spendCategories = [
-    { label: 'Flights', amount: currentPlan.spend_breakdown.flights, color: 'bg-teal-500', barColor: '#0EA5A5' },
-    { label: 'Accommodation', amount: currentPlan.spend_breakdown.accommodation, color: 'bg-indigo-500', barColor: '#6366F1' },
-    { label: 'Food & Dining', amount: currentPlan.spend_breakdown.food, color: 'bg-amber-500', barColor: '#F59E0B' },
-    { label: 'Tickets & Activities', amount: currentPlan.spend_breakdown.tickets, color: 'bg-emerald-500', barColor: '#10B981' },
-    { label: 'Local Transport', amount: currentPlan.spend_breakdown.transport, color: 'bg-blue-500', barColor: '#3B82F6' },
-    { label: 'Other Essentials', amount: currentPlan.spend_breakdown.other, color: 'bg-purple-500', barColor: '#8B5CF6' }
+    { label: 'Flights', amount: plan.spend_breakdown.flights, color: 'bg-teal-500', barColor: '#0EA5A5' },
+    { label: 'Accommodation', amount: plan.spend_breakdown.accommodation, color: 'bg-indigo-500', barColor: '#6366F1' },
+    { label: 'Food & Dining', amount: plan.spend_breakdown.food, color: 'bg-amber-500', barColor: '#F59E0B' },
+    { label: 'Tickets & Activities', amount: plan.spend_breakdown.tickets, color: 'bg-emerald-500', barColor: '#10B981' },
+    { label: 'Local Transport', amount: plan.spend_breakdown.transport, color: 'bg-blue-500', barColor: '#3B82F6' },
+    { label: 'Other Essentials', amount: plan.spend_breakdown.other, color: 'bg-purple-500', barColor: '#8B5CF6' }
   ];
 
   return (
@@ -111,7 +80,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
             }`}
           >
             <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
-            <span>{currentPlan.likes}</span>
+            <span>{plan.likes}</span>
           </button>
 
           <button
@@ -140,7 +109,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
           {/* Plus: "Use as template" button */}
           <button
             id="btn-use-as-template"
-            onClick={() => onUseAsTemplate(currentPlan)}
+            onClick={() => onUseAsTemplate(plan)}
             className="px-4 py-2 rounded-xl bg-[#FF6B4A] hover:bg-[#E85837] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -150,66 +119,21 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
       </div>
 
       {/* Verified author header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 text-xs gap-3">
-        <div className="flex items-center gap-3">
-          <img
-            src={currentPlan.author_avatar}
-            alt={currentPlan.author_name}
-            className="w-9 h-9 rounded-full object-cover border border-[#0EA5A5]"
-          />
-          <div>
-            <div className="flex items-center gap-1.5 font-bold text-[#1F2937]">
-              <span>{currentPlan.author_name}</span>
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#2FBF71] bg-[#2FBF71]/10 px-2 py-0.2 rounded-md">
-                <ShieldCheck className="w-3 h-3" />
-                Completed & Verified Trip
-              </span>
-            </div>
-            <span className="text-[#374151]/70">Posted on {currentPlan.created_at} • {currentPlan.destination_name}</span>
-          </div>
-        </div>
-
-        {/* Rating & Reviews summary pill */}
-        <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-[#D9CFC2] shadow-xs self-start sm:self-auto">
-          <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-          <span className="font-extrabold text-[#1F2937] text-xs">{currentPlan.rating ? currentPlan.rating.toFixed(2) : '4.95'}</span>
-          <span className="text-[11px] text-[#374151]">({reviewsCount} reviews)</span>
-        </div>
-      </div>
-
-      {/* Picture Gallery */}
-      <div id="plan-picture-gallery" className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-6">
-        <div className="lg:col-span-3 aspect-16/9 rounded-2xl overflow-hidden bg-[#EFEAE2] border border-[#D9CFC2]/70 shadow-sm relative group">
-          <img
-            src={selectedPhoto}
-            alt={currentPlan.title}
-            className="w-full h-full object-cover transition-all duration-300"
-          />
-          <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-xs text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium shadow-sm">
-            <Camera className="w-3.5 h-3.5 text-[#0EA5A5]" />
-            <span>Itinerary Photo Gallery</span>
-            <span className="text-white/70 ml-1">
-              ({galleryImages.indexOf(selectedPhoto) + 1} / {galleryImages.length})
+      <div className="flex items-center gap-3 mb-4 text-xs">
+        <img
+          src={plan.author_avatar}
+          alt={plan.author_name}
+          className="w-9 h-9 rounded-full object-cover border border-[#0EA5A5]"
+        />
+        <div>
+          <div className="flex items-center gap-1.5 font-bold text-[#1F2937]">
+            <span>{plan.author_name}</span>
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#2FBF71] bg-[#2FBF71]/10 px-2 py-0.2 rounded-md">
+              <ShieldCheck className="w-3 h-3" />
+              Completed & Verified Trip
             </span>
           </div>
-        </div>
-
-        {/* Thumbnail Selector */}
-        <div className="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-          {galleryImages.map((img, i) => (
-            <button
-              key={i}
-              onClick={() => setSelectedPhoto(img)}
-              className={`relative flex-1 min-w-[84px] aspect-16/9 lg:aspect-auto lg:h-24 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                selectedPhoto === img
-                  ? 'border-[#0EA5A5] ring-2 ring-[#0EA5A5]/30'
-                  : 'border-transparent opacity-75 hover:opacity-100'
-              }`}
-              title={`View itinerary photo ${i + 1}`}
-            >
-              <img src={img} alt={`${currentPlan.title} photo ${i + 1}`} className="w-full h-full object-cover" />
-            </button>
-          ))}
+          <span className="text-[#374151]/70">Posted on {plan.created_at} • {plan.destination_name}</span>
         </div>
       </div>
 
@@ -225,7 +149,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
           9. Local cultural etiquette tips
       */}
 
-      <div className="bg-white rounded-3xl border border-[#D9CFC2] p-6 sm:p-8 shadow-xs space-y-8 mb-8">
+      <div className="bg-white rounded-3xl border border-[#D9CFC2] p-6 sm:p-8 shadow-xs space-y-8">
         {/* Field 1: Title */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -233,11 +157,31 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
               Curated Plan
             </span>
             <span className="text-[#374151]/50">•</span>
-            <span className="text-xs text-[#374151] font-semibold">{currentPlan.destination_name}</span>
+            <span className="text-xs text-[#374151] font-semibold">{plan.destination_name}</span>
           </div>
           <h1 id="plan-field-1-title" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1F2937] font-display leading-tight">
-            {currentPlan.title}
+            {plan.title}
           </h1>
+
+          {/* Location link and operating info */}
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[#374151]">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-[#0EA5A5]" />
+              <strong>Operating Time:</strong> All day curated route (08:00 – 22:30 daily)
+            </span>
+            <span className="text-[#D9CFC2]">•</span>
+            <a
+              id="link-google-maps-plan"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(plan.destination_name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[#FF6B4A] font-bold hover:underline"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Location on Google Maps</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
 
         {/* Field 2 & 3: Days of travel + Total spend (headline number) */}
@@ -246,8 +190,8 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
           <div id="plan-field-2-days" className="flex flex-col justify-center">
             <span className="text-xs font-bold text-[#0EA5A5] uppercase tracking-wider">Days of Travel</span>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-3xl font-extrabold text-[#1F2937] font-display">{currentPlan.days}</span>
-              <span className="text-sm font-semibold text-[#374151]">Full Days / {currentPlan.days - 1} Nights</span>
+              <span className="text-3xl font-extrabold text-[#1F2937] font-display">{plan.days}</span>
+              <span className="text-sm font-semibold text-[#374151]">Full Days / {plan.days - 1} Nights</span>
             </div>
           </div>
 
@@ -256,7 +200,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
             <span className="text-xs font-bold text-[#FF6B4A] uppercase tracking-wider">Total Actual Spend</span>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-4xl font-extrabold text-[#FF6B4A] font-display">
-                ${currentPlan.total_spend.toLocaleString()}
+                ${plan.total_spend.toLocaleString()}
               </span>
               <span className="text-xs font-medium text-[#374151]">total per person</span>
             </div>
@@ -267,7 +211,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
         <div id="plan-field-4-description" className="space-y-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#374151]/70">Overview & Field Notes</h3>
           <p className="text-sm text-[#374151] leading-relaxed">
-            {currentPlan.description}
+            {plan.description}
           </p>
         </div>
 
@@ -281,7 +225,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
           {/* Visual Progress Bar */}
           <div className="w-full h-3 rounded-full overflow-hidden flex bg-gray-100 shadow-inner">
             {spendCategories.map((cat, idx) => {
-              const pct = (cat.amount / currentPlan.total_spend) * 100;
+              const pct = (cat.amount / plan.total_spend) * 100;
               return (
                 <div
                   key={idx}
@@ -303,7 +247,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="font-extrabold text-[#1F2937] text-sm">${cat.amount}</span>
                   <span className="text-[11px] text-[#374151]/70">
-                    {((cat.amount / currentPlan.total_spend) * 100).toFixed(0)}%
+                    {((cat.amount / plan.total_spend) * 100).toFixed(0)}%
                   </span>
                 </div>
               </div>
@@ -320,17 +264,17 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold text-[#1F2937]">{currentPlan.flight_details.airline}</p>
+              <p className="text-sm font-bold text-[#1F2937]">{plan.flight_details.airline}</p>
               <div className="flex items-center gap-2 text-xs text-[#374151] mt-0.5">
-                <span className="font-semibold text-[#086666]">{currentPlan.flight_details.from_airport}</span>
+                <span className="font-semibold text-[#086666]">{plan.flight_details.from_airport}</span>
                 <span>→</span>
-                <span className="font-semibold text-[#086666]">{currentPlan.flight_details.to_airport}</span>
+                <span className="font-semibold text-[#086666]">{plan.flight_details.to_airport}</span>
               </div>
             </div>
 
-            {currentPlan.flight_details.duration && (
+            {plan.flight_details.duration && (
               <div className="text-xs bg-white px-3 py-1.5 rounded-xl border border-[#0EA5A5]/20 font-semibold text-[#086666] shrink-0">
-                {currentPlan.flight_details.duration}
+                {plan.flight_details.duration}
               </div>
             )}
           </div>
@@ -341,7 +285,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
           <h3 className="text-base font-bold text-[#1F2937] font-display">Day-by-Day Realized Itinerary</h3>
 
           <div className="space-y-4">
-            {currentPlan.day_by_day.map((day) => (
+            {plan.day_by_day.map((day) => (
               <div key={day.day} className="rounded-2xl border border-[#D9CFC2] overflow-hidden">
                 <div className="bg-[#FBF7F2] p-4 border-b border-[#D9CFC2] flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -387,7 +331,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
               <span>What to Bring (Packing Checklist)</span>
             </h4>
             <ul className="space-y-2 text-xs text-[#374151]">
-              {currentPlan.packing_list.map((item, idx) => (
+              {plan.packing_list.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-[#0EA5A5] font-bold">✓</span>
                   <span>{item}</span>
@@ -403,7 +347,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
               <span>Cautions & Practical Reminders</span>
             </h4>
             <ul className="space-y-2 text-xs text-[#374151]">
-              {currentPlan.cautions.map((item, idx) => (
+              {plan.cautions.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-[#E85555] font-bold">!</span>
                   <span>{item}</span>
@@ -420,7 +364,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
             <span>Local Cultural Etiquette Tips</span>
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#374151]">
-            {currentPlan.etiquette_tips.map((tip, idx) => (
+            {plan.etiquette_tips.map((tip, idx) => (
               <div key={idx} className="p-3 rounded-xl bg-white/80 border border-amber-100 leading-relaxed">
                 {tip}
               </div>
@@ -435,7 +379,7 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
             <p className="text-xs text-[#374151]">Load these exact days, destination, budget, and activities into your timeline.</p>
           </div>
           <button
-            onClick={() => onUseAsTemplate(currentPlan)}
+            onClick={() => onUseAsTemplate(plan)}
             className="px-6 py-3 rounded-xl bg-[#FF6B4A] hover:bg-[#E85837] text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all"
           >
             <Copy className="w-4 h-4" />
@@ -443,21 +387,6 @@ export const PlanDetail: React.FC<PlanDetailProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Traveler Reviews & Ratings for this Itinerary */}
-      <ReviewSection
-        entityId={currentPlan.id}
-        entityName={currentPlan.title}
-        entityType="plan"
-        rating={currentPlan.rating || 4.95}
-        reviews={reviewsList}
-        reviewsCount={reviewsCount}
-        title="Traveler Itinerary Reviews"
-        subtitle={`Real travelers who completed or adapted ${currentPlan.title}`}
-        verifiedBadgeText="Completed Itinerary"
-        commentPlaceholder="Did you follow this route? Share pacing tips, budget accuracy, favorite stops, or seasonal adjustments..."
-        onSubmitReview={handleReviewSubmit}
-      />
     </div>
   );
 };

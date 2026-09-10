@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trip } from '../types';
 import { db } from '../services/db';
 import {
@@ -17,26 +17,14 @@ import {
   ExternalLink,
   ShieldCheck,
   Clock,
-  Trash2,
-  CloudRain,
-  RotateCcw,
-  CheckCircle2,
-  Zap,
-  Check
+  Trash2
 } from 'lucide-react';
-import { PlanBNotificationBanner } from './planB/PlanBNotificationBanner';
-import { PlanBComparisonCard } from './planB/PlanBComparisonCard';
-import { PlanBDetailModal } from './planB/PlanBDetailModal';
-import {
-  calculateDaysUntilTrip,
-  isTripClose,
-  getOrGeneratePlanBAlert,
-  applyPlanB,
-  dismissPlanB
-} from '../services/planBService';
+import { PlanBSuggestionCard } from './planB/PlanBSuggestionCard';
+import { formatTime12 } from '../utils/timeUtils';
 
 interface MyPlansPageProps {
   trips: Trip[];
+  activeTripId?: string;
   onOpenTrip: (trip: Trip) => void;
   onCreateNew: () => void;
   onDeleteTrip: (tripId: string) => void;
@@ -45,25 +33,52 @@ interface MyPlansPageProps {
 
 export const MyPlansPage: React.FC<MyPlansPageProps> = ({
   trips = [],
+  activeTripId,
   onOpenTrip,
   onCreateNew,
   onDeleteTrip,
   onUpdateTrip
 }) => {
-  const safeTrips = Array.isArray(trips) ? trips : [];
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(safeTrips[0] || null);
+  // Always use trips provided via props as single source of truth, fallback to db.getTrips()
+  const safeTrips = Array.isArray(trips) ? trips : db.getTrips();
+
+  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(() => {
+    if (activeTripId) {
+      const match = safeTrips.find(t => t.id === activeTripId);
+      if (match) return match;
+    }
+    return safeTrips[0] || null;
+  });
   const [newChecklistText, setNewChecklistText] = useState('');
-  const [isPlanBDetailModalOpen, setIsPlanBDetailModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'all'>('itinerary');
+
+  // Keep selected trip in sync when trips list changes or activeTripId is provided
+  useEffect(() => {
+    if (activeTripId) {
+      const match = safeTrips.find(t => t.id === activeTripId);
+      if (match) {
+        setSelectedTrip(match);
+        return;
+      }
+    }
+    if (!selectedTrip || !safeTrips.some(t => t.id === selectedTrip.id)) {
+      setSelectedTrip(safeTrips[0] || null);
+    }
+  }, [trips, activeTripId]);
 
   // Keep selected trip in sync with changes
-  const activeTrip = safeTrips.find(t => t.id === selectedTrip?.id) || safeTrips[0] || null;
+  const activeTrip = (selectedTrip ? safeTrips.find(t => t.id === selectedTrip.id) : null)
+    || (activeTripId ? safeTrips.find(t => t.id === activeTripId) : null)
+    || safeTrips[0]
+    || null;
 
-  // Plan B & Timing calculation
-  const daysUntil = activeTrip ? calculateDaysUntilTrip(activeTrip) : 30;
-  const isClose = isTripClose(daysUntil);
-  const planBAlert = activeTrip ? getOrGeneratePlanBAlert(activeTrip) : null;
+  // Handle trip update from Plan B or checklist
+  const handleTripUpdated = (updatedTrip: Trip) => {
+    db.saveTrip(updatedTrip);
+    setSelectedTrip(updatedTrip);
+    if (onUpdateTrip) {
+      onUpdateTrip(updatedTrip);
+    }
+  };
 
   // Toggle packing checklist item
   const handleToggleChecklist = (tripId: string, itemId: string) => {
@@ -75,7 +90,6 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
     const updatedTrip = { ...activeTrip, packing_checklist: updatedChecklist };
     db.saveTrip(updatedTrip);
     setSelectedTrip(updatedTrip);
-    if (onUpdateTrip) onUpdateTrip(updatedTrip);
   };
 
   // Add packing item
@@ -93,96 +107,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
     };
     db.saveTrip(updatedTrip);
     setSelectedTrip(updatedTrip);
-    if (onUpdateTrip) onUpdateTrip(updatedTrip);
     setNewChecklistText('');
-  };
-
-  // Plan B Handlers (Section 5 User Controls)
-  const handleUsePlanB = () => {
-    if (!activeTrip || !planBAlert) return;
-    const updatedTrip = applyPlanB(activeTrip, planBAlert);
-    db.saveTrip(updatedTrip);
-    setSelectedTrip(updatedTrip);
-    if (onUpdateTrip) onUpdateTrip(updatedTrip);
-
-    setToastMessage(
-      `Plan B Applied: ${planBAlert.affected_item_name} replaced with ${planBAlert.suggested_plan_b.place_name}. Timeline updated!`
-    );
-    setTimeout(() => setToastMessage(null), 5000);
-  };
-
-  const handleKeepCurrentPlan = () => {
-    if (!activeTrip || !planBAlert) return;
-    const updatedTrip = dismissPlanB(activeTrip, planBAlert);
-    db.saveTrip(updatedTrip);
-    setSelectedTrip(updatedTrip);
-    if (onUpdateTrip) onUpdateTrip(updatedTrip);
-
-    setToastMessage(
-      `Current Plan Kept: You chose to keep ${planBAlert.affected_item_name} despite the rain forecast.`
-    );
-    setTimeout(() => setToastMessage(null), 5000);
-  };
-
-  const handleResetPlanB = () => {
-    if (!activeTrip) return;
-    // Restore original Kyoto sample item if it was replaced
-    const originalFushimi = {
-      id: 'item-1',
-      trip_id: activeTrip.id,
-      day_index: 0,
-      place_id: 'place-fushimi',
-      place_name: 'Fushimi Inari Taisha',
-      place_type: 'attraction' as const,
-      start_time: '08:30',
-      end_time: '10:30',
-      duration_mins: 120,
-      image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80',
-      category: 'Attraction',
-      maps_url: 'https://www.google.com/maps/search/?api=1&query=Fushimi+Inari+Kyoto',
-      notes: 'Ascend the vermilion torii gates at crisp morning air',
-      transport_to_next: {
-        mode: 'subway' as const,
-        duration_mins: 18,
-        detail: 'Keihan Main Line to Gion-Shijo'
-      }
-    };
-
-    const updatedItinerary = (activeTrip.itinerary || []).map(item =>
-      item.place_name === 'Kyoto Railway Museum' || item.id === 'item-1' ? originalFushimi : item
-    );
-
-    const updatedTrip: Trip = {
-      ...activeTrip,
-      itinerary: updatedItinerary,
-      plan_b_alert: undefined
-    };
-
-    db.saveTrip(updatedTrip);
-    setSelectedTrip(updatedTrip);
-    if (onUpdateTrip) onUpdateTrip(updatedTrip);
-
-    setToastMessage('Plan B simulation reset: Original itinerary restored.');
-    setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  // Change simulated trip proximity (for testing Requirement 2)
-  const handleSetProximity = (days: number | null) => {
-    if (!activeTrip) return;
-    const updatedTrip: Trip = {
-      ...activeTrip,
-      simulated_days_until: days
-    };
-    db.saveTrip(updatedTrip);
-    setSelectedTrip(updatedTrip);
-    if (onUpdateTrip) onUpdateTrip(updatedTrip);
-
-    if (days === null) {
-      setToastMessage('Proximity reset to actual trip calendar dates (far away).');
-    } else {
-      setToastMessage(`Trip proximity simulated to: ${days} day${days === 1 ? '' : 's'} before trip.`);
-    }
-    setTimeout(() => setToastMessage(null), 3500);
   };
 
   // Calculate budget vs actual spend
@@ -198,17 +123,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
   const isOverBudget = estimatedActualSpend > targetBudget && targetBudget > 0;
 
   return (
-    <div id="my-plans-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-      {/* Toast Feedback */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-md p-4 rounded-2xl bg-[#1F2937] text-white text-xs font-semibold shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <div className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
-            <Check className="w-3.5 h-3.5" />
-          </div>
-          <span className="leading-snug">{toastMessage}</span>
-        </div>
-      )}
-
+    <div id="my-plans-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
@@ -217,7 +132,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
             <span>My Trips & Itineraries</span>
           </h1>
           <p className="text-xs sm:text-sm text-[#374151] mt-1">
-            Manage your saved itineraries, unexpected changes (Plan B), budgets, and daily schedules.
+            Manage your personal travel itineraries, budgets, packing lists, and day-by-day schedules.
           </p>
         </div>
 
@@ -256,83 +171,64 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
               Saved Trips ({safeTrips.length})
             </h3>
 
-            {safeTrips.map(trip => {
-              const tripDaysUntil = calculateDaysUntilTrip(trip);
-              const tripIsClose = isTripClose(tripDaysUntil);
-              const hasActivePlanB = trip.plan_b_alert?.status === 'applied';
-
-              return (
-                <div
-                  key={trip.id}
-                  onClick={() => setSelectedTrip(trip)}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    activeTrip?.id === trip.id
-                      ? 'border-[#0EA5A5] bg-white ring-2 ring-[#0EA5A5]/20 shadow-xs'
-                      : 'border-[#D9CFC2] bg-[#FBF7F2] hover:border-[#0EA5A5]/60'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0EA5A5]/10 text-[#086666]">
-                          {trip.days} Days • {(trip.destinations || [])[0] || 'Destination'}
-                        </span>
-                        {tripIsClose && !hasActivePlanB && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
-                            ⚠️ In {tripDaysUntil}d
-                          </span>
-                        )}
-                        {hasActivePlanB && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                            Plan B Active
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-sm font-bold text-[#1F2937] mt-1.5 line-clamp-1">
-                        {trip.title}
-                      </h4>
-                      <p className="text-xs text-[#374151] mt-0.5">
-                        {trip.start_date} → {trip.end_date}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this trip plan?')) {
-                          onDeleteTrip(trip.id);
-                        }
-                      }}
-                      className="text-gray-400 hover:text-red-500 p-1 cursor-pointer"
-                      title="Delete trip"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            {safeTrips.map(trip => (
+              <div
+                key={trip.id}
+                onClick={() => setSelectedTrip(trip)}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                  activeTrip?.id === trip.id
+                    ? 'border-[#0EA5A5] bg-white ring-2 ring-[#0EA5A5]/20 shadow-xs'
+                    : 'border-[#D9CFC2] bg-[#FBF7F2] hover:border-[#0EA5A5]/60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0EA5A5]/10 text-[#086666]">
+                      {trip.days} Days • {(trip.destinations || [])[0] || 'Destination'}
+                    </span>
+                    <h4 className="text-sm font-bold text-[#1F2937] mt-1.5 line-clamp-1">
+                      {trip.title}
+                    </h4>
+                    <p className="text-xs text-[#374151] mt-0.5">
+                      {trip.start_date} → {trip.end_date}
+                    </p>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-[#D9CFC2]/60 flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-semibold text-[#374151]/80">
-                      {trip.itinerary?.length || 0} scheduled items
-                    </span>
-                    <span className="text-xs font-bold text-[#0EA5A5] flex items-center gap-1">
-                      <span>Full Itinerary</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </span>
-                  </div>
+                  <button
+                    id={`btn-delete-trip-${trip.id}`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      onDeleteTrip(trip.id);
+                    }}
+                    className="text-gray-400 hover:text-red-500 p-1 cursor-pointer"
+                    title="Delete trip"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              );
-            })}
+
+                <div className="mt-3 pt-2.5 border-t border-[#D9CFC2]/60 flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-semibold text-[#374151]/80">
+                    {trip.itinerary?.length || 0} scheduled items
+                  </span>
+                  <span className="text-xs font-bold text-[#0EA5A5] flex items-center gap-1">
+                    <span>View Plan</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Right Column: Full Trip Plan & Saved Itinerary */}
+          {/* Right Column: Full Trip Plan Overview (Section 3.8) */}
           {activeTrip && (
-            <div className="lg:col-span-8 bg-white rounded-3xl border border-[#D9CFC2] p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="lg:col-span-8 bg-white rounded-3xl border border-[#D9CFC2] p-6 sm:p-8 shadow-xs space-y-8">
               {/* Trip Title & Action Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#EFEAE2]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#EFEAE2]">
                 <div>
                   <div className="flex items-center gap-2 text-xs mb-1">
                     <span className="font-semibold text-[#0EA5A5] bg-[#0EA5A5]/10 px-2 py-0.5 rounded-md">
-                      Active Saved Trip
+                      Active Plan
                     </span>
                     <span className="text-[#374151]/50">•</span>
                     <span className="text-[#374151] font-medium">{activeTrip.destinations.join(' • ')}</span>
@@ -342,180 +238,109 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                   </h2>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    id="btn-edit-timeline-builder"
-                    onClick={() => onOpenTrip(activeTrip)}
-                    className="px-4 py-2.5 rounded-xl border border-[#0EA5A5] text-[#0EA5A5] hover:bg-[#0EA5A5]/5 font-bold text-xs shadow-xs flex items-center gap-2 transition-all cursor-pointer self-start sm:self-auto"
-                    title="Open Timeline Builder"
-                  >
-                    <Sliders className="w-4 h-4" />
-                    <span>Customize Timeline</span>
-                  </button>
-                </div>
+                <button
+                  id="btn-edit-timeline-builder"
+                  onClick={() => onOpenTrip(activeTrip)}
+                  className="px-5 py-2.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <Sliders className="w-4 h-4" />
+                  <span>Open Itinerary Timeline</span>
+                </button>
               </div>
 
-              {/* Requirement 2: Proximity Status & Simulator Controls */}
+              {/* Requirement: Budget vs. actual spend tracker (with warning badge if actual exceeds budget) */}
               <div
-                id="trip-proximity-control"
-                className="p-3.5 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                id="budget-tracker-box"
+                className="p-5 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2] space-y-3"
               >
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <Calendar className="w-4 h-4 text-[#0EA5A5] shrink-0" />
-                  <span className="font-bold text-[#1F2937]">Trip Proximity:</span>
-                  {isClose ? (
-                    <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1 border border-amber-200">
-                      <span>Trip in {daysUntil} day{daysUntil === 1 ? '' : 's'}</span>
-                      <span>• ⚠️ Weather Alert Active</span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-[#0EA5A5]" />
+                    <h3 className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">
+                      Budget vs. Actual Spend Tracker
+                    </h3>
+                  </div>
+
+                  {isOverBudget ? (
+                    <span
+                      id="badge-over-budget"
+                      className="px-2.5 py-1 rounded-lg bg-red-100 text-[#E85555] text-xs font-bold flex items-center gap-1 border border-red-200"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Over Budget Target</span>
                     </span>
                   ) : (
-                    <span className="font-semibold text-[#086666] bg-[#0EA5A5]/10 px-2 py-0.5 rounded-md">
-                      Trip is in {daysUntil} days • All clear (Alerts activate 1–3 days before trip)
+                    <span
+                      id="badge-on-budget"
+                      className="px-2.5 py-1 rounded-lg bg-emerald-100 text-[#2FBF71] text-xs font-bold flex items-center gap-1 border border-emerald-200"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Within Budget</span>
                     </span>
                   )}
                 </div>
 
-                {/* Simulation toggle buttons for instant prototype testing */}
-                <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
-                  <span className="text-[#374151]/70 font-semibold mr-1">Proximity Test:</span>
-                  <button
-                    id="btn-simulate-3-days"
-                    onClick={() => handleSetProximity(3)}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      daysUntil === 3
-                        ? 'bg-[#0EA5A5] text-white shadow-xs'
-                        : 'bg-white border border-[#D9CFC2] text-[#374151] hover:bg-gray-50'
-                    }`}
-                  >
-                    ⚡ In 3 Days (Show Alert)
-                  </button>
-                  <button
-                    id="btn-simulate-1-day"
-                    onClick={() => handleSetProximity(1)}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      daysUntil === 1
-                        ? 'bg-[#0EA5A5] text-white shadow-xs'
-                        : 'bg-white border border-[#D9CFC2] text-[#374151] hover:bg-gray-50'
-                    }`}
-                  >
-                    ⚡ In 1 Day
-                  </button>
-                  <button
-                    id="btn-simulate-normal"
-                    onClick={() => handleSetProximity(null)}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      activeTrip.simulated_days_until === null || activeTrip.simulated_days_until === undefined
-                        ? 'bg-[#374151] text-white'
-                        : 'bg-white border border-[#D9CFC2] text-[#374151] hover:bg-gray-50'
-                    }`}
-                    title="Simulate trip when far away (e.g., months ahead)"
-                  >
-                    📅 Far Away (No Alerts)
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div className="bg-white p-3.5 rounded-xl border border-[#D9CFC2]/70">
+                    <span className="text-[11px] text-[#374151]/70 font-semibold block">Target Budget Target</span>
+                    <span className="text-2xl font-extrabold text-[#1F2937] font-display">
+                      ${targetBudget}
+                    </span>
+                    <span className="text-[11px] text-[#374151] block mt-0.5">
+                      (${activeTrip.budget_amount}/day × {activeTrip.days} days)
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-3.5 rounded-xl border border-[#D9CFC2]/70">
+                    <span className="text-[11px] text-[#374151]/70 font-semibold block">
+                      Estimated Actual Spend
+                    </span>
+                    <span
+                      className={`text-2xl font-extrabold font-display ${
+                        isOverBudget ? 'text-[#E85555]' : 'text-[#FF6B4A]'
+                      }`}
+                    >
+                      ${estimatedActualSpend}
+                    </span>
+                    <span className="text-[11px] text-[#374151] block mt-0.5">
+                      (Includes flight, accommodation, & daily spend)
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Requirement 3: Notification Banner (Only shows when trip is close) */}
-              {isClose && planBAlert && (
-                <PlanBNotificationBanner
-                  alert={planBAlert}
-                  destinationName={activeTrip.destinations[0] || 'Trip'}
-                  onViewPlanB={() => {
-                    setIsPlanBDetailModalOpen(true);
-                    const el = document.getElementById('full-itinerary-section');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                />
-              )}
+              {/* Plan B Suggestion Feature: Shows small card when there is a relevant unexpected change */}
+              <PlanBSuggestionCard
+                trip={activeTrip}
+                onUpdateTrip={handleTripUpdated}
+              />
 
-              {/* View Switcher Tabs */}
-              <div className="flex items-center gap-2 border-b border-[#EFEAE2] pb-3">
-                <button
-                  onClick={() => setActiveTab('itinerary')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === 'itinerary'
-                      ? 'bg-[#0EA5A5] text-white shadow-xs'
-                      : 'bg-[#FBF7F2] text-[#374151] hover:bg-gray-100'
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Full Itinerary (Plan B)</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === 'all'
-                      ? 'bg-[#0EA5A5] text-white shadow-xs'
-                      : 'bg-[#FBF7F2] text-[#374151] hover:bg-gray-100'
-                  }`}
-                >
-                  <span>All Details (Budget & Bookings)</span>
-                </button>
-              </div>
-
-              {/* SECTION: Full Itinerary & Plan B (Requirements 1, 4, 5) */}
-              <div id="full-itinerary-section" className="space-y-4 pt-2">
+              {/* Requirement: Day-by-day plan with times and locations */}
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-[#1F2937] font-display flex items-center gap-2">
                     <Clock className="w-4 h-4 text-[#0EA5A5]" />
-                    <span>Full Itinerary — Day-by-Day Schedule</span>
+                    <span>Day-by-Day Schedule & Locations</span>
                   </h3>
                   <span className="text-xs font-semibold text-[#374151]">
-                    {activeTrip.itinerary?.length || 0} scheduled activities
+                    {activeTrip.itinerary?.length || 0} scheduled items
                   </span>
                 </div>
 
-                {/* Requirement 5: Plan B Unexpected Change Card inside Full Itinerary */}
-                {isClose && planBAlert && (
-                  <PlanBComparisonCard
-                    alert={planBAlert}
-                    onUsePlanB={handleUsePlanB}
-                    onKeepCurrentPlan={handleKeepCurrentPlan}
-                    onViewPlanBDetails={() => setIsPlanBDetailModalOpen(true)}
-                    onResetPlanB={handleResetPlanB}
-                  />
-                )}
-
-                {/* Day-by-Day Activities List */}
                 {(!activeTrip.itinerary || activeTrip.itinerary.length === 0) ? (
                   <p className="text-xs text-[#374151] italic bg-[#FBF7F2] p-4 rounded-xl border border-[#D9CFC2]/60">
-                    No timeline items added yet. Click "Customize Timeline" to schedule places.
+                    No timeline items added yet. Click "Open Itinerary Timeline" to schedule places.
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {Array.from({ length: activeTrip.days || 1 }).map((_, dIdx) => {
                       const dayItems = (activeTrip.itinerary || []).filter(i => i.day_index === dIdx);
-                      const isAffectedDay = isClose && planBAlert && planBAlert.affected_day_index === dIdx;
-
                       return (
-                        <div
-                          key={dIdx}
-                          className={`rounded-2xl border overflow-hidden transition-all ${
-                            isAffectedDay
-                              ? 'border-amber-300 ring-2 ring-amber-200/50'
-                              : 'border-[#D9CFC2]'
-                          }`}
-                        >
-                          <div className={`px-4 py-2.5 border-b flex items-center justify-between ${
-                            isAffectedDay ? 'bg-amber-50/70 border-amber-200' : 'bg-[#FBF7F2] border-[#D9CFC2]'
-                          }`}>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-extrabold text-[#0EA5A5]">
-                                Day {dIdx + 1}
-                              </span>
-                              {isAffectedDay && planBAlert?.status === 'pending' && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 flex items-center gap-1">
-                                  <CloudRain className="w-3 h-3" />
-                                  <span>Rain Forecast (Plan B Available)</span>
-                                </span>
-                              )}
-                              {isAffectedDay && planBAlert?.status === 'applied' && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                                  <Check className="w-3 h-3" />
-                                  <span>Plan B Applied (Sheltered Indoor)</span>
-                                </span>
-                              )}
-                            </div>
+                        <div key={dIdx} className="rounded-2xl border border-[#D9CFC2] overflow-hidden">
+                          <div className="bg-[#FBF7F2] px-4 py-2.5 border-b border-[#D9CFC2] flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-[#0EA5A5]">
+                              Day {dIdx + 1}
+                            </span>
                             <span className="text-[11px] text-[#374151] font-semibold">
                               {dayItems.length} activities
                             </span>
@@ -526,84 +351,57 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                               <p className="text-xs text-[#374151]/70 italic py-1">Free day / open schedule.</p>
                             ) : (
                               dayItems.map(item => {
-                                const isTargetItem =
-                                  isClose &&
-                                  planBAlert &&
-                                  item.id === planBAlert.affected_item_id;
-                                const isReplacementItem =
-                                  planBAlert &&
-                                  planBAlert.status === 'applied' &&
-                                  item.place_name === planBAlert.suggested_plan_b.place_name;
+                                const isPlanBSubstituted =
+                                  item.place_name === 'Kyoto Railway Museum' ||
+                                  item.place_name === 'Kyoto International Manga Museum' ||
+                                  item.place_name === 'Mori Art Museum & Indoor Sky Deck';
+                                const isRainAlertItem =
+                                  item.place_name.toLowerCase().includes('fushimi inari');
 
                                 return (
                                   <div
                                     key={item.id}
-                                    className={`flex items-start justify-between gap-3 text-xs p-3 rounded-xl border transition-all ${
-                                      isTargetItem && planBAlert?.status === 'pending'
-                                        ? 'bg-amber-50/60 border-amber-300 ring-1 ring-amber-300'
-                                        : isReplacementItem
-                                        ? 'bg-emerald-50/60 border-emerald-300 ring-1 ring-emerald-300'
+                                    className={`flex items-start justify-between gap-3 text-xs p-2.5 rounded-xl border transition-all ${
+                                      isPlanBSubstituted
+                                        ? 'bg-emerald-50/50 border-emerald-300 ring-1 ring-emerald-300/40'
                                         : 'bg-white border-[#EFEAE2]'
                                     }`}
                                   >
-                                    <div className="flex items-start gap-3">
-                                      <span className="font-mono font-bold text-[#0EA5A5] w-24 shrink-0 mt-0.5">
-                                        {item.start_time} - {item.end_time}
+                                    <div className="flex items-start gap-2.5">
+                                      <span className="font-mono font-bold text-[#0EA5A5] w-28 shrink-0">
+                                        {formatTime12(item.start_time)} – {formatTime12(item.end_time)}
                                       </span>
                                       <div>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <p className="font-bold text-[#1F2937] text-sm">
-                                            {item.place_name}
-                                          </p>
-                                          {isTargetItem && planBAlert?.status === 'pending' && (
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-200 text-amber-900 flex items-center gap-1">
-                                              <AlertTriangle className="w-3 h-3 text-amber-700" />
-                                              <span>Rain Impacted</span>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <p className="font-bold text-[#1F2937]">{item.place_name}</p>
+                                          {isPlanBSubstituted && (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-200/80 text-emerald-800">
+                                              Plan B Substituted
                                             </span>
                                           )}
-                                          {isReplacementItem && (
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-200 text-emerald-900 flex items-center gap-1">
-                                              <Sparkles className="w-3 h-3 text-emerald-700" />
-                                              <span>Plan B (Indoor)</span>
+                                          {isRainAlertItem && (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                                              Rain Alert
                                             </span>
                                           )}
                                         </div>
-
                                         {item.notes && (
-                                          <p className="text-[11px] text-[#374151]/80 mt-0.5 line-clamp-1">
-                                            {item.notes}
-                                          </p>
-                                        )}
-
-                                        {item.transport_to_next && (
-                                          <p className="text-[10px] text-[#0EA5A5] mt-1 font-semibold">
-                                            → {item.transport_to_next.detail}
-                                          </p>
+                                          <p className="text-[11px] text-[#374151]/70 line-clamp-1 mt-0.5">{item.notes}</p>
                                         )}
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      {isTargetItem && planBAlert?.status === 'pending' && (
-                                        <button
-                                          onClick={() => setIsPlanBDetailModalOpen(true)}
-                                          className="text-[11px] font-bold text-[#FF6B4A] hover:underline"
-                                        >
-                                          View Plan B
-                                        </button>
-                                      )}
-                                      {item.maps_url && (
-                                        <a
-                                          href={item.maps_url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-[#0EA5A5] hover:underline flex items-center gap-1 font-semibold text-[11px]"
-                                        >
-                                          <MapPin className="w-3 h-3" />
-                                          <span>Map</span>
-                                        </a>
-                                      )}
-                                    </div>
+                                    {item.maps_url && (
+                                      <a
+                                        href={item.maps_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#0EA5A5] hover:underline flex items-center gap-1 shrink-0 font-semibold text-[11px]"
+                                      >
+                                        <MapPin className="w-3 h-3" />
+                                        <span>Map</span>
+                                      </a>
+                                    )}
                                   </div>
                                 );
                               })
@@ -615,69 +413,6 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                   </div>
                 )}
               </div>
-
-              {/* Requirement: Budget vs. actual spend tracker (shown in full details tab) */}
-              {(activeTab === 'all' || activeTab === 'itinerary') && (
-                <div
-                  id="budget-tracker-box"
-                  className="p-5 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2] space-y-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-[#0EA5A5]" />
-                      <h3 className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">
-                        Budget vs. Actual Spend Tracker
-                      </h3>
-                    </div>
-
-                    {isOverBudget ? (
-                      <span
-                        id="badge-over-budget"
-                        className="px-2.5 py-1 rounded-lg bg-red-100 text-[#E85555] text-xs font-bold flex items-center gap-1 border border-red-200"
-                      >
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>Over Budget Target</span>
-                      </span>
-                    ) : (
-                      <span
-                        id="badge-on-budget"
-                        className="px-2.5 py-1 rounded-lg bg-emerald-100 text-[#2FBF71] text-xs font-bold flex items-center gap-1 border border-emerald-200"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Within Budget</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div className="bg-white p-3.5 rounded-xl border border-[#D9CFC2]/70">
-                      <span className="text-[11px] text-[#374151]/70 font-semibold block">Target Budget Target</span>
-                      <span className="text-2xl font-extrabold text-[#1F2937] font-display">
-                        ${targetBudget}
-                      </span>
-                      <span className="text-[11px] text-[#374151] block mt-0.5">
-                        (${activeTrip.budget_amount}/day × {activeTrip.days} days)
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-3.5 rounded-xl border border-[#D9CFC2]/70">
-                      <span className="text-[11px] text-[#374151]/70 font-semibold block">
-                        Estimated Actual Spend
-                      </span>
-                      <span
-                        className={`text-2xl font-extrabold font-display ${
-                          isOverBudget ? 'text-[#E85555]' : 'text-[#FF6B4A]'
-                        }`}
-                      >
-                        ${estimatedActualSpend}
-                      </span>
-                      <span className="text-[11px] text-[#374151] block mt-0.5">
-                        (Includes flight, accommodation, & daily spend)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Requirement: Flight + hotel details with links */}
               {activeTrip.combined_package && (
@@ -808,17 +543,6 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
             </div>
           )}
         </div>
-      )}
-
-      {/* Plan B Detail Modal */}
-      {planBAlert && (
-        <PlanBDetailModal
-          isOpen={isPlanBDetailModalOpen}
-          onClose={() => setIsPlanBDetailModalOpen(false)}
-          alert={planBAlert}
-          onUsePlanB={handleUsePlanB}
-          onKeepCurrentPlan={handleKeepCurrentPlan}
-        />
       )}
     </div>
   );

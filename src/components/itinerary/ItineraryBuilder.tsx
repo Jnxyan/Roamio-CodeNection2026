@@ -38,6 +38,154 @@ import {
   X
 } from 'lucide-react';
 
+interface TimelineWordBarProps {
+  id?: string;
+  startTime: string;
+  endTime: string;
+  durationMins?: number;
+  label?: string;
+  placeholder?: string;
+  onAddCustomActivity: (title: string, startTime: string, endTime?: string) => void;
+  onDropPlace: (place: DiscoverablePlace, time: string) => void;
+  onMoveItem: (itemId: string, time: string) => void;
+  draggedPlace: DiscoverablePlace | null;
+  draggedItem: ItineraryItem | null;
+}
+
+const TimelineWordBar: React.FC<TimelineWordBarProps> = ({
+  id,
+  startTime,
+  endTime,
+  durationMins,
+  label,
+  placeholder,
+  onAddCustomActivity,
+  onDropPlace,
+  onMoveItem,
+  draggedPlace,
+  draggedItem,
+}) => {
+  const [inputValue, setInputValue] = useState('');
+  const [isOver, setIsOver] = useState(false);
+
+  const handleSubmit = (customTitle?: string) => {
+    const textToSubmit = (customTitle || inputValue).trim();
+    if (!textToSubmit) return;
+    onAddCustomActivity(textToSubmit, startTime, endTime);
+    setInputValue('');
+  };
+
+  const quickChips = [
+    'Walk around hotel area',
+    'Rest at hotel',
+    'Coffee break',
+    'Souvenir shopping',
+  ];
+
+  return (
+    <div
+      id={id}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOver(true);
+      }}
+      onDragLeave={() => setIsOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOver(false);
+        if (draggedItem) {
+          onMoveItem(draggedItem.id, startTime);
+        } else if (draggedPlace) {
+          onDropPlace(draggedPlace, startTime);
+        }
+      }}
+      className={`my-3 p-3.5 rounded-2xl border transition-all ${
+        isOver
+          ? 'border-[#0EA5A5] bg-[#0EA5A5]/10 shadow-xs ring-2 ring-[#0EA5A5]/30'
+          : 'border-dashed border-[#D9CFC2] bg-[#FBF7F2]/80 hover:border-[#0EA5A5]/60 hover:bg-[#FBF7F2]'
+      }`}
+    >
+      {/* Slot Header info */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono font-bold text-xs text-[#0EA5A5] bg-white px-2.5 py-0.5 rounded-md border border-[#D9CFC2] shadow-2xs">
+            {formatTime12(startTime)} – {formatTime12(endTime)}
+          </span>
+          <span className="font-semibold text-xs text-[#1F2937]">
+            {label || 'Free / Unplanned Time'}
+          </span>
+          {durationMins && durationMins > 0 ? (
+            <span className="text-[11px] text-[#374151]/70 font-mono">
+              ({formatDuration(durationMins)})
+            </span>
+          ) : null}
+        </div>
+        <span className="text-[11px] text-[#374151]/60 font-medium">
+          {isOver ? (
+            <strong className="text-[#0EA5A5]">Release to drop place at {formatTime12(startTime)}</strong>
+          ) : (
+            'Straight away write plan or drop place'
+          )}
+        </span>
+      </div>
+
+      {/* Word Bar: direct input where user straight away writes */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            placeholder={placeholder || 'Write custom plan (e.g. Walk around hotel, Rest, Coffee)... or drop place'}
+            className="w-full pl-9 pr-24 py-2 rounded-xl bg-white border border-[#D9CFC2] text-xs text-[#1F2937] placeholder-[#374151]/45 focus:outline-none focus:border-[#0EA5A5] focus:ring-1 focus:ring-[#0EA5A5] shadow-2xs transition-all"
+          />
+          <Sparkles className="w-4 h-4 text-[#0EA5A5] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {inputValue.trim() ? (
+              <button
+                type="button"
+                onClick={() => handleSubmit()}
+                className="px-2.5 py-1 rounded-lg bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-[11px] font-bold shadow-2xs flex items-center gap-1 cursor-pointer transition-all"
+              >
+                <span>Add</span>
+                <span className="text-[9px] opacity-80">↵</span>
+              </button>
+            ) : (
+              <span className="text-[10px] text-[#374151]/40 pr-2 pointer-events-none hidden sm:inline">
+                press Enter ↵
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Idea Chips */}
+      <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-1">
+        <span className="text-[10px] text-[#374151]/50 font-medium mr-0.5">Quick ideas:</span>
+        {quickChips.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            onClick={() => handleSubmit(chip)}
+            className="text-[10px] font-medium text-[#086666] bg-white hover:bg-[#0EA5A5]/10 border border-[#D9CFC2]/70 hover:border-[#0EA5A5] px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+          >
+            + {chip}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface ItineraryBuilderProps {
   trip: Trip;
   onSaveTrip: (updatedTrip: Trip) => void;
@@ -98,6 +246,12 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   const [customWebsite, setCustomWebsite] = useState<string>('');
   const [customFormError, setCustomFormError] = useState<string | null>(null);
 
+  // Top Word Bar state
+  const topInputRef = useRef<HTMLInputElement>(null);
+  const [topWordBarText, setTopWordBarText] = useState<string>('');
+  const [topWordBarTime, setTopWordBarTime] = useState<string>('09:00');
+  const [isTopDragOver, setIsTopDragOver] = useState<boolean>(false);
+
   const timelineRef = useRef<HTMLDivElement>(null);
   const timeOptions = getTimeSlotOptions(15);
 
@@ -138,6 +292,21 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   const currentDayItems = (itineraryItems || [])
     .filter(item => item.day_index === activeDayIndex)
     .sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time));
+
+  // Sync default time for top word bar to end of current day's last item or 09:00
+  useEffect(() => {
+    if (currentDayItems && currentDayItems.length > 0) {
+      const lastItem = currentDayItems[currentDayItems.length - 1];
+      const lastMins = timeToMinutes(lastItem.end_time);
+      if (lastMins < 1320) {
+        setTopWordBarTime(lastItem.end_time);
+      } else {
+        setTopWordBarTime('09:00');
+      }
+    } else {
+      setTopWordBarTime('09:00');
+    }
+  }, [activeDayIndex, itineraryItems.length]);
 
   // Compute transports between consecutive items
   const itemsWithTransports = currentDayItems.map((item, idx) => {
@@ -571,6 +740,47 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
     setIsCustomModalOpen(false);
   };
 
+  // Straight away add custom activity from word bar without modal
+  const handleQuickAddCustomActivity = (title: string, startTime: string, endTime?: string) => {
+    if (!title || !title.trim()) return;
+    const cleanTitle = title.trim();
+    const startMins = timeToMinutes(startTime);
+    let endMins = endTime ? timeToMinutes(endTime) : startMins + 60;
+    if (endMins <= startMins) {
+      endMins = startMins + 60;
+    }
+    const durationMins = Math.max(15, endMins - startMins);
+
+    const newItem: ItineraryItem = {
+      id: `custom-act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      trip_id: trip.id,
+      day_index: activeDayIndex,
+      place_id: `custom-place-${Date.now()}`,
+      place_name: cleanTitle,
+      place_type: 'activity',
+      start_time: startTime,
+      end_time: minutesToTime(endMins),
+      duration_mins: durationMins,
+      image: '',
+      category: 'Activity',
+      is_custom: true,
+    };
+    const updated = [...itineraryItems, newItem];
+    saveAndSync(updated);
+    showToast(`Added "${cleanTitle}" at ${formatTime12(startTime)}`);
+
+    // Advance topWordBarTime to end of new item if before 22:00
+    if (endMins < 1320) {
+      setTopWordBarTime(minutesToTime(endMins));
+    }
+  };
+
+  const handleTopWordBarSubmit = () => {
+    if (!topWordBarText.trim()) return;
+    handleQuickAddCustomActivity(topWordBarText.trim(), topWordBarTime);
+    setTopWordBarText('');
+  };
+
   // Continuous drag over timeline calculation
   const handleTimelineDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -643,7 +853,9 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
             <button
               id="btn-save-itinerary"
               onClick={() => {
-                db.saveTrip({ ...trip, itinerary: itineraryItems });
+                const updatedTrip = { ...trip, itinerary: itineraryItems };
+                db.saveTrip(updatedTrip);
+                onSaveTrip(updatedTrip);
                 showToast('Trip itinerary saved securely.');
               }}
               className="px-4 py-2 rounded-xl border border-[#0EA5A5] text-[#0EA5A5] hover:bg-[#0EA5A5] hover:text-white font-bold text-xs transition-all cursor-pointer"
@@ -653,7 +865,11 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
 
             <button
               id="btn-finish-itinerary"
-              onClick={() => onFinish({ ...trip, itinerary: itineraryItems })}
+              onClick={() => {
+                const updatedTrip = { ...trip, itinerary: itineraryItems };
+                db.saveTrip(updatedTrip);
+                onFinish(updatedTrip);
+              }}
               className="px-5 py-2 rounded-xl bg-[#FF6B4A] hover:bg-[#E85837] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <span>Finish & View My Plan</span>
@@ -842,16 +1058,125 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
             <div className="flex items-center gap-2">
               <button
                 id="btn-add-activity-header"
-                onClick={() => openAddCustomActivity()}
+                onClick={() => {
+                  topInputRef.current?.focus();
+                  topInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
                 className="px-3.5 py-1.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
-                title="Add custom plan or activity to this day"
+                title="Write plan or drop place below"
               >
-                <Plus className="w-4 h-4" />
-                <span>+ Add Activity</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Write Plan</span>
               </button>
               <span className="text-xs font-bold text-[#0EA5A5] bg-[#0EA5A5]/10 px-3 py-1 rounded-xl">
                 {currentDayItems?.length || 0} Scheduled Activities
               </span>
+            </div>
+          </div>
+
+          {/* Top Quick Activity Word Bar: straight away write or drop place for Day X */}
+          <div
+            id="top-timeline-word-bar"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsTopDragOver(true);
+            }}
+            onDragLeave={() => setIsTopDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsTopDragOver(false);
+              if (draggedItem) {
+                moveItemToTime(draggedItem.id, topWordBarTime);
+                setDraggedItem(null);
+              } else if (draggedPlace) {
+                schedulePlaceAt(draggedPlace, topWordBarTime);
+                setDraggedPlace(null);
+              }
+            }}
+            className={`mb-4 p-3.5 rounded-2xl border transition-all ${
+              isTopDragOver
+                ? 'border-[#0EA5A5] bg-[#0EA5A5]/10 shadow-xs ring-2 ring-[#0EA5A5]/30'
+                : 'border-[#D9CFC2] bg-[#FBF7F2]/90 hover:border-[#0EA5A5]/60'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-xs text-[#1F2937] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0EA5A5]" />
+                  <span>Quick Add Plan for Day {activeDayIndex + 1}:</span>
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[#374151]/70 font-medium">Time:</span>
+                  <select
+                    value={topWordBarTime}
+                    onChange={(e) => setTopWordBarTime(e.target.value)}
+                    className="px-2 py-0.5 rounded-lg border border-[#D9CFC2] bg-white font-mono text-xs font-semibold text-[#0EA5A5] focus:outline-none focus:border-[#0EA5A5]"
+                  >
+                    {timeOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <span className="text-[11px] text-[#374151]/60 font-medium hidden sm:inline">
+                {isTopDragOver ? (
+                  <strong className="text-[#0EA5A5]">Release to drop place at {formatTime12(topWordBarTime)}</strong>
+                ) : (
+                  'Write plan or drop place'
+                )}
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                ref={topInputRef}
+                type="text"
+                value={topWordBarText}
+                onChange={(e) => setTopWordBarText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleTopWordBarSubmit();
+                  }
+                }}
+                placeholder="Straight away write custom plan (e.g. Walk around hotel area, Rest, Coffee)... or drop place"
+                className="w-full pl-9 pr-24 py-2 rounded-xl bg-white border border-[#D9CFC2] text-xs text-[#1F2937] placeholder-[#374151]/45 focus:outline-none focus:border-[#0EA5A5] focus:ring-1 focus:ring-[#0EA5A5] shadow-2xs transition-all"
+              />
+              <Sparkles className="w-4 h-4 text-[#0EA5A5] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {topWordBarText.trim() ? (
+                  <button
+                    type="button"
+                    onClick={handleTopWordBarSubmit}
+                    className="px-2.5 py-1 rounded-lg bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-[11px] font-bold shadow-2xs flex items-center gap-1 cursor-pointer transition-all"
+                  >
+                    <span>Add</span>
+                    <span className="text-[9px] opacity-80">↵</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-[#374151]/40 pr-2 pointer-events-none hidden sm:inline">
+                    press Enter ↵
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-0.5">
+              <span className="text-[10px] text-[#374151]/50 font-medium mr-0.5">Quick ideas:</span>
+              {['Walk around hotel area', 'Rest at hotel', 'Coffee break', 'Souvenir shopping'].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    handleQuickAddCustomActivity(chip, topWordBarTime);
+                  }}
+                  className="text-[10px] font-medium text-[#086666] bg-white hover:bg-[#0EA5A5]/10 border border-[#D9CFC2]/70 hover:border-[#0EA5A5] px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                >
+                  + {chip}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -886,21 +1211,31 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
             {(!itemsWithTransports || itemsWithTransports.length === 0) ? (
               <div className="py-8 text-center border-2 border-dashed border-[#D9CFC2] rounded-3xl bg-[#FBF7F2]/60 p-6">
                 <div className="w-12 h-12 rounded-2xl bg-[#0EA5A5]/10 text-[#0EA5A5] flex items-center justify-center mx-auto mb-3">
-                  <Plus className="w-6 h-6" />
+                  <Sparkles className="w-6 h-6" />
                 </div>
                 <h4 className="text-sm font-bold text-[#1F2937]">Day {activeDayIndex + 1} timeline is open</h4>
                 <p className="text-xs text-[#374151] mt-1 max-w-sm mx-auto mb-4">
-                  Add your own activities, or drag & drop places from the left panel onto any time below.
+                  Straight away write your plan below, or drag & drop places from the left panel onto any time.
                 </p>
+
+                {/* Direct Word Bar for Empty State */}
+                <div className="max-w-lg mx-auto mb-4 text-left">
+                  <TimelineWordBar
+                    id="empty-day-word-bar"
+                    startTime="09:00"
+                    endTime="10:30"
+                    durationMins={90}
+                    label={`Day ${activeDayIndex + 1} Open Schedule`}
+                    placeholder="Straight away write your first activity (e.g. Check-in, Morning walk)... or drop place"
+                    onAddCustomActivity={handleQuickAddCustomActivity}
+                    onDropPlace={schedulePlaceAt}
+                    onMoveItem={moveItemToTime}
+                    draggedPlace={draggedPlace}
+                    draggedItem={draggedItem}
+                  />
+                </div>
+
                 <div className="flex flex-wrap items-center justify-center gap-2.5 mb-6">
-                  <button
-                    id="btn-empty-day-add-activity"
-                    onClick={() => openAddCustomActivity('09:00', '10:30')}
-                    className="px-4 py-2 rounded-xl bg-[#0EA5A5] text-white text-xs font-bold shadow-xs hover:bg-[#0B8585] transition-all cursor-pointer inline-flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>+ Add Activity</span>
-                  </button>
                   <button
                     onClick={handleFillFreeTime}
                     className="px-4 py-2 rounded-xl bg-white border border-[#D9CFC2] text-[#1F2937] hover:border-[#0EA5A5] text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
@@ -915,7 +1250,11 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                   {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:30', '19:00', '20:30'].map(slotTime => (
                     <div
                       key={slotTime}
-                      onClick={() => openAddCustomActivity(slotTime, minutesToTime(timeToMinutes(slotTime) + 60))}
+                      onClick={() => {
+                        setTopWordBarTime(slotTime);
+                        topInputRef.current?.focus();
+                        topInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -934,14 +1273,14 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                         setHoveredDropTime(null);
                       }}
                       className="p-2.5 rounded-xl border border-dashed border-[#D9CFC2] hover:border-[#0EA5A5] bg-white/80 hover:bg-[#0EA5A5]/5 transition-all text-xs flex items-center justify-between group cursor-pointer"
-                      title="Click to add custom activity or drop place here"
+                      title="Click to write plan or drop place here"
                     >
                       <span className="font-mono font-bold text-[#0EA5A5] text-xs">
                         {formatTime12(slotTime)}
                       </span>
                       <span className="text-[11px] text-[#374151]/60 group-hover:text-[#0EA5A5] group-hover:font-bold flex items-center gap-1">
                         <Plus className="w-3 h-3 text-[#0EA5A5]" />
-                        <span>Add / Drop here</span>
+                        <span>Write / Drop here</span>
                       </span>
                     </div>
                   ))}
@@ -957,57 +1296,19 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                     const morningStart = '07:30';
                     const gapMins = firstMins - 450;
                     return (
-                      <div
-                        onClick={() => openAddCustomActivity(morningStart, firstItem.start_time)}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setHoveredDropTime(morningStart);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (draggedItem) {
-                            moveItemToTime(draggedItem.id, morningStart);
-                            setDraggedItem(null);
-                          } else if (draggedPlace) {
-                            schedulePlaceAt(draggedPlace, morningStart);
-                            setDraggedPlace(null);
-                          }
-                          setHoveredDropTime(null);
-                        }}
-                        className="py-3 px-4 rounded-2xl border border-dashed border-[#D9CFC2] hover:border-[#0EA5A5] bg-[#FBF7F2]/70 hover:bg-[#0EA5A5]/5 transition-all text-xs flex flex-wrap items-center justify-between gap-2 cursor-pointer group"
-                      >
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono font-bold text-xs text-[#0EA5A5] bg-white px-2.5 py-1 rounded-md border border-[#D9CFC2]">
-                            {morningStart} – {formatTime12(firstItem.start_time)}
-                          </span>
-                          <span className="font-semibold text-xs text-[#1F2937]">
-                            Free / Unplanned Time
-                          </span>
-                          {gapMins > 0 && (
-                            <span className="text-[11px] text-[#374151]/70 font-mono">
-                              ({formatDuration(gapMins)})
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openAddCustomActivity(morningStart, firstItem.start_time);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>+ Add Activity</span>
-                          </button>
-                          <span className="hidden sm:inline text-[11px] text-[#374151]/60 group-hover:text-[#0EA5A5] font-medium">
-                            or drop place
-                          </span>
-                        </div>
-                      </div>
+                      <TimelineWordBar
+                        id="morning-free-slot-bar"
+                        startTime={morningStart}
+                        endTime={firstItem.start_time}
+                        durationMins={gapMins}
+                        label="Morning Free / Unplanned Time"
+                        placeholder="Write morning plan (e.g. Hotel breakfast, Morning walk, Coffee)... or drop place"
+                        onAddCustomActivity={handleQuickAddCustomActivity}
+                        onDropPlace={schedulePlaceAt}
+                        onMoveItem={moveItemToTime}
+                        draggedPlace={draggedPlace}
+                        draggedItem={draggedItem}
+                      />
                     );
                   })()
                 )}
@@ -1412,55 +1713,20 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                           const gap = nextStart - curEnd;
                           if (gap >= 15) {
                             return (
-                              <div
-                                onClick={() => openAddCustomActivity(item.end_time, currentDayItems[idx + 1].start_time)}
-                                onDragOver={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setHoveredDropTime(item.end_time);
-                                }}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  if (draggedItem) {
-                                    moveItemToTime(draggedItem.id, item.end_time);
-                                    setDraggedItem(null);
-                                  } else if (draggedPlace) {
-                                    schedulePlaceAt(draggedPlace, item.end_time);
-                                    setDraggedPlace(null);
-                                  }
-                                  setHoveredDropTime(null);
-                                }}
-                                className="my-2.5 py-3 px-4 rounded-2xl border border-dashed border-[#D9CFC2] hover:border-[#0EA5A5] bg-[#FBF7F2]/70 hover:bg-[#0EA5A5]/5 transition-all flex flex-wrap items-center justify-between gap-2 text-xs cursor-pointer group"
-                              >
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-mono font-bold text-xs text-[#0EA5A5] bg-white px-2.5 py-1 rounded-md border border-[#D9CFC2]">
-                                    {formatTime12(item.end_time)} – {formatTime12(currentDayItems[idx + 1].start_time)}
-                                  </span>
-                                  <span className="font-semibold text-xs text-[#1F2937]">
-                                    Free / Unplanned Time
-                                  </span>
-                                  <span className="text-[11px] text-[#374151]/70 font-mono">
-                                    ({formatDuration(gap)})
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openAddCustomActivity(item.end_time, currentDayItems[idx + 1].start_time);
-                                    }}
-                                    className="px-3 py-1.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>+ Add Activity</span>
-                                  </button>
-                                  <span className="hidden sm:inline text-[11px] text-[#374151]/60 group-hover:text-[#0EA5A5] font-medium">
-                                    or drop place
-                                  </span>
-                                </div>
-                              </div>
+                              <TimelineWordBar
+                                key={`gap-wordbar-${item.id}`}
+                                id={`gap-wordbar-${item.id}`}
+                                startTime={item.end_time}
+                                endTime={currentDayItems[idx + 1].start_time}
+                                durationMins={gap}
+                                label="Free / Unplanned Time"
+                                placeholder="Write custom plan (e.g. Rest at hotel, Coffee break, Lunch)... or drop place here"
+                                onAddCustomActivity={handleQuickAddCustomActivity}
+                                onDropPlace={schedulePlaceAt}
+                                onMoveItem={moveItemToTime}
+                                draggedPlace={draggedPlace}
+                                draggedItem={draggedItem}
+                              />
                             );
                           }
                           return null;
@@ -1483,42 +1749,35 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                         <div className="space-y-2">
                           {/* Evening Unplanned Time block if before 22:00 */}
                           {lastEndMins < 1320 && (
-                            <div
-                              onClick={() => openAddCustomActivity(lastItem.end_time, minutesToTime(Math.min(1410, lastEndMins + 90)))}
-                              className="py-3 px-4 rounded-2xl border border-dashed border-[#D9CFC2] hover:border-[#0EA5A5] bg-[#FBF7F2]/70 hover:bg-[#0EA5A5]/5 transition-all flex flex-wrap items-center justify-between gap-2 text-xs cursor-pointer group"
-                            >
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono font-bold text-xs text-[#0EA5A5] bg-white px-2.5 py-1 rounded-md border border-[#D9CFC2]">
-                                  {formatTime12(lastItem.end_time)} – 10:00 PM
-                                </span>
-                                <span className="font-semibold text-xs text-[#1F2937]">
-                                  Evening Free / Unplanned Time
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openAddCustomActivity(lastItem.end_time, minutesToTime(Math.min(1410, lastEndMins + 90)));
-                                }}
-                                className="px-3 py-1.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>+ Add Activity</span>
-                              </button>
-                            </div>
+                            <TimelineWordBar
+                              id="evening-free-slot-bar"
+                              startTime={lastItem.end_time}
+                              endTime={minutesToTime(Math.min(1320, lastEndMins + 90))}
+                              durationMins={Math.min(1320, lastEndMins + 90) - lastEndMins}
+                              label="Evening Free / Unplanned Time"
+                              placeholder="Write evening plan (e.g. Dinner, Night walk, Hotel rest)... or drop place here"
+                              onAddCustomActivity={handleQuickAddCustomActivity}
+                              onDropPlace={schedulePlaceAt}
+                              onMoveItem={moveItemToTime}
+                              draggedPlace={draggedPlace}
+                              draggedItem={draggedItem}
+                            />
                           )}
 
                           {eveningSlots.length > 0 && (
                             <div className="space-y-1.5">
                               <div className="text-[11px] font-bold text-[#374151]/60 px-1">
-                                Quick Drop / Add Slots:
+                                Quick Drop / Write Slots:
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {eveningSlots.map(slotTime => (
                                   <div
                                     key={slotTime}
-                                    onClick={() => openAddCustomActivity(slotTime, minutesToTime(timeToMinutes(slotTime) + 60))}
+                                    onClick={() => {
+                                      setTopWordBarTime(slotTime);
+                                      topInputRef.current?.focus();
+                                      topInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }}
                                     onDragOver={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
@@ -1537,13 +1796,14 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
                                       setHoveredDropTime(null);
                                     }}
                                     className="py-2 px-3 rounded-xl border border-dashed border-[#D9CFC2] hover:border-[#0EA5A5] bg-[#FBF7F2]/50 hover:bg-[#0EA5A5]/5 transition-all flex items-center justify-between text-xs cursor-pointer group"
+                                    title="Click to write plan or drop place here"
                                   >
                                     <span className="font-mono font-bold text-[#0EA5A5] text-xs">
                                       {formatTime12(slotTime)}
                                     </span>
                                     <span className="text-[11px] text-[#374151]/60 group-hover:text-[#0EA5A5] group-hover:font-semibold flex items-center gap-1">
                                       <Plus className="w-3 h-3" />
-                                      <span>Add / Drop ({formatTime12(slotTime)})</span>
+                                      <span>Write / Drop ({formatTime12(slotTime)})</span>
                                     </span>
                                   </div>
                                 ))}
