@@ -306,7 +306,33 @@ export const INITIAL_HOTELS: Hotel[] = [
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Gion+Hatanaka+Kyoto',
     rating: 4.94,
     reviews_count: 512,
-    typical_days: 5
+    typical_days: 5,
+    reviews: [
+      {
+        id: 'rev-gh-1',
+        user: 'Marcus Vance',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: '[Couples Getaway] An unforgettable traditional ryokan experience. The private cypress wood hinoki bath scented the entire suite, and the multi-course kaiseki dinner served in our room was Michelin-quality.'
+      },
+      {
+        id: 'rev-gh-2',
+        user: 'Elena Rostova',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '3 weeks ago',
+        comment: '[Great Location] Steps away from Yasaka Shrine yet completely quiet inside. The staff prepared our futons with utmost care, and the morning garden stroll was serene.'
+      },
+      {
+        id: 'rev-gh-3',
+        user: 'Kenji Sato',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+        rating: 4,
+        date: '1 month ago',
+        comment: '[Quiet Room] Authentic tatami rooms with incredible tea ceremony hospitality. Worth every penny for a true historic Kyoto retreat.'
+      }
+    ]
   },
   {
     id: 'hotel-kyoto-2',
@@ -326,7 +352,25 @@ export const INITIAL_HOTELS: Hotel[] = [
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Ace+Hotel+Kyoto',
     rating: 4.88,
     reviews_count: 780,
-    typical_days: 5
+    typical_days: 5,
+    reviews: [
+      {
+        id: 'rev-ace-1',
+        user: 'Chloe Dubois',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '5 days ago',
+        comment: '[Solo Traveler] Kengo Kuma design meets modern boutique cool. Loved spinning vinyl records in the room and grabbing morning Stumptown cold brews before exploring.'
+      },
+      {
+        id: 'rev-ace-2',
+        user: 'David Kim',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: '[Great Location] Connected directly to Karasuma Oike subway station. Renting their custom Tokyo bikes made cycling along the Kamo River effortless.'
+      }
+    ]
   },
   {
     id: 'hotel-paris-1',
@@ -346,7 +390,25 @@ export const INITIAL_HOTELS: Hotel[] = [
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Hotel+Saint+Germain+Paris',
     rating: 4.91,
     reviews_count: 830,
-    typical_days: 6
+    typical_days: 6,
+    reviews: [
+      {
+        id: 'rev-paris-h1',
+        user: 'Sarah Jenkins',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: '[Couples Getaway] Opening our French balcony doors to hear the morning bells of Saint-Germain was pure magic. Warm croissants delivered fresh daily!'
+      },
+      {
+        id: 'rev-paris-h2',
+        user: 'Julian Thorne',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+        rating: 4,
+        date: '3 weeks ago',
+        comment: '[Great Location] Perfect walking base for the Louvre, Notre Dame, and boutique art galleries. The concierge booked hard-to-get dinner reservations for us.'
+      }
+    ]
   },
   {
     id: 'hotel-rome-1',
@@ -366,7 +428,25 @@ export const INITIAL_HOTELS: Hotel[] = [
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Palazzo+Manfredi+Rome',
     rating: 4.96,
     reviews_count: 420,
-    typical_days: 4
+    typical_days: 4,
+    reviews: [
+      {
+        id: 'rev-rome-h1',
+        user: 'Alessandro Rossi',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: '[Verified Guest] Waking up with the Colosseum arches literally filling your bedroom window is unforgettable. The rooftop breakfast overlooking the ancient forum is world-class.'
+      },
+      {
+        id: 'rev-rome-h2',
+        user: 'Camilla Bauer',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 month ago',
+        comment: '[Couples Getaway] Impeccable luxury service. Champagne on arrival and luxurious Acqua di Parma toiletries.'
+      }
+    ]
   },
   {
     id: 'hotel-bali-1',
@@ -386,7 +466,25 @@ export const INITIAL_HOTELS: Hotel[] = [
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Maya+Ubud+Resort+Bali',
     rating: 4.92,
     reviews_count: 940,
-    typical_days: 7
+    typical_days: 7,
+    reviews: [
+      {
+        id: 'rev-bali-h1',
+        user: 'Tara Jenkins',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '4 days ago',
+        comment: '[Quiet Room] Deep rainforest peace. The infinity pool cantilevered over the Petanu River valley is sublime, and the riverside massage pavilion was heavenly.'
+      },
+      {
+        id: 'rev-bali-h2',
+        user: 'Marcus Vance',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: '[Family Friendly] The complimentary daily yoga classes and nature walks made our stay so rejuvenating. The free hourly shuttle into central Ubud was very reliable.'
+      }
+    ]
   },
   {
     id: 'hotel-barcelona-1',
@@ -406,7 +504,25 @@ export const INITIAL_HOTELS: Hotel[] = [
     maps_url: 'https://www.google.com/maps/search/?api=1&query=Hotel+Arts+Barcelona',
     rating: 4.89,
     reviews_count: 670,
-    typical_days: 4
+    typical_days: 4,
+    reviews: [
+      {
+        id: 'rev-bcn-h1',
+        user: 'Mateo Gomez',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: '[Great Location] Unrivaled beachfront location right by Port Olímpic. The Mediterranean sea views from the 28th floor were breathtaking.'
+      },
+      {
+        id: 'rev-bcn-h2',
+        user: 'Sophie Laurent',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        rating: 4,
+        date: '3 weeks ago',
+        comment: '[Couples Getaway] The infinity pool garden overlooking Frank Gehry’s golden fish sculpture is a spectacular spot for sunset cocktails.'
+      }
+    ]
   }
 ];
 
@@ -436,7 +552,15 @@ export const INITIAL_RESTAURANTS: Restaurant[] = [
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '2 weeks ago',
-        comment: 'Every plate was an exquisite poem. Sitting at the counter watching the master chef is mesmerizing.'
+        comment: '[Signature Dish] Every plate was an exquisite poem. Sitting at the counter watching the master chef prepare the seasonal sashimi is mesmerizing.'
+      },
+      {
+        id: 'rev-gk2',
+        user: 'Sarah Jenkins',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 month ago',
+        comment: '[Romantic Ambiance] Booked 2 months ahead for our anniversary dinner. The Saikyo sweet miso black cod melted like butter on the tongue. Worth the splurge.'
       }
     ]
   },
@@ -464,7 +588,15 @@ export const INITIAL_RESTAURANTS: Restaurant[] = [
         avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '3 weeks ago',
-        comment: 'Not just a viral spectacle — the smoky scallion broth is deeply flavorful!'
+        comment: '[Must-Try Dish] Not just a viral spectacle — the smoky scallion broth is deeply flavorful!'
+      },
+      {
+        id: 'rev-m2',
+        user: 'Alex Rivera',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        rating: 4,
+        date: '1 month ago',
+        comment: '[Quick Service] High energy experience! Wear the paper apron they provide because the flame is intense. Arrive 15 minutes before opening.'
       }
     ]
   },
@@ -493,7 +625,15 @@ export const INITIAL_RESTAURANTS: Restaurant[] = [
         avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '1 month ago',
-        comment: 'Quintessential Paris bistro atmosphere. Arrive a few minutes before 12:00 for lunch!'
+        comment: '[Outdoor Seating] Quintessential Paris bistro atmosphere. Arrive a few minutes before 12:00 for lunch to get an outdoor sidewalk table!'
+      },
+      {
+        id: 'rev-cp2',
+        user: 'Julian Thorne',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: '[Must-Try Dish] The roasted duck breast with cherry glaze is legendary. Pair it with a glass of Côtes du Rhône.'
       }
     ]
   },
@@ -522,7 +662,15 @@ export const INITIAL_RESTAURANTS: Restaurant[] = [
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '2 weeks ago',
-        comment: 'Best carbonara in Rome, bar none. The guanciale is cooked to perfection.'
+        comment: '[Must-Try Dish] Best carbonara in Rome, bar none. The guanciale is cooked to perfection with zero greasiness.'
+      },
+      {
+        id: 'rev-de2',
+        user: 'Marco Bellini',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '3 weeks ago',
+        comment: '[Great Value] The Carciofo alla Giudia was crispy and sublime. Arrive 20 minutes before 19:30 evening opening to get a table.'
       }
     ]
   },
@@ -550,7 +698,15 @@ export const INITIAL_RESTAURANTS: Restaurant[] = [
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
         rating: 5,
         date: '3 weeks ago',
-        comment: 'Mind-blowing creativity with Indonesian indigenous plants and spices.'
+        comment: '[Signature Cocktail] Mind-blowing creativity with Indonesian indigenous plants and spices. The smoked jackfruit rendang is phenomenal.'
+      },
+      {
+        id: 'rev-loc2',
+        user: 'Chloe Dubois',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 month ago',
+        comment: '[Romantic Ambiance] Beautiful minimalist wooden dining room in Ubud. The mocktails and cocktail pairings using local herbs are unmatched.'
       }
     ]
   }
@@ -567,6 +723,12 @@ export const INITIAL_PLANS: Plan[] = [
     destination_id: 'dest-kyoto',
     destination_name: 'Kyoto, Japan',
     cover_photo: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1578637387939-43c525550085?auto=format&fit=crop&w=1200&q=80'
+    ],
     days: 5,
     total_spend: 1680,
     spend_breakdown: {
@@ -667,7 +829,35 @@ export const INITIAL_PLANS: Plan[] = [
     is_template: true,
     likes: 428,
     saves: 310,
-    created_at: '2026-08-15'
+    created_at: '2026-08-15',
+    rating: 4.96,
+    reviews_count: 148,
+    reviews: [
+      {
+        id: 'rev-plan-k1',
+        user: 'Lucas Martinez',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: '[Followed Exactly] The 06:30 AM timing for Fushimi Inari was life-saving! When we walked down around 9:00 AM, the crowds were insane. This pacing is genuinely perfection.'
+      },
+      {
+        id: 'rev-plan-k2',
+        user: 'Mei-Ling Zhou',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: '[Great Budget Tips] Loved how the budget breakdown matched real-world costs down to the IC card fares. The udon spot on Day 4 was delicious and inexpensive.'
+      },
+      {
+        id: 'rev-plan-k3',
+        user: 'David Kim',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 month ago',
+        comment: '[Pacing Was Perfect] Best itinerary I have ever downloaded. The balance of high energy mornings with relaxing afternoons gave us energy the whole 5 days.'
+      }
+    ]
   },
   {
     id: 'plan-paris-4d',
@@ -679,6 +869,12 @@ export const INITIAL_PLANS: Plan[] = [
     destination_id: 'dest-paris',
     destination_name: 'Paris, France',
     cover_photo: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1520939817895-060bdef4bf1a?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1509299349698-dd22323b5963?auto=format&fit=crop&w=1200&q=80'
+    ],
     days: 4,
     total_spend: 1850,
     spend_breakdown: {
@@ -763,7 +959,27 @@ export const INITIAL_PLANS: Plan[] = [
     is_template: true,
     likes: 382,
     saves: 245,
-    created_at: '2026-07-28'
+    created_at: '2026-07-28',
+    rating: 4.93,
+    reviews_count: 98,
+    reviews: [
+      {
+        id: 'rev-plan-p1',
+        user: 'Claire Dupont',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '2 weeks ago',
+        comment: '[Hidden Gem Finds] The tip to enter the Louvre through the Carrousel entrance saved us at least 45 minutes of waiting outdoors in the cold.'
+      },
+      {
+        id: 'rev-plan-p2',
+        user: 'Sarah Jenkins',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '3 weeks ago',
+        comment: '[Followed Exactly] Loved the covered passages on Day 3! It was raining slightly and walking through Galerie Vivienne felt like stepping into the 1800s.'
+      }
+    ]
   },
   {
     id: 'plan-rome-3d',
@@ -775,6 +991,12 @@ export const INITIAL_PLANS: Plan[] = [
     destination_id: 'dest-rome',
     destination_name: 'Rome, Italy',
     cover_photo: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1531572753322-ad063cecc140?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=1200&q=80'
+    ],
     days: 3,
     total_spend: 1120,
     spend_breakdown: {
@@ -810,7 +1032,27 @@ export const INITIAL_PLANS: Plan[] = [
     is_template: true,
     likes: 290,
     saves: 195,
-    created_at: '2026-08-01'
+    created_at: '2026-08-01',
+    rating: 4.94,
+    reviews_count: 76,
+    reviews: [
+      {
+        id: 'rev-plan-r1',
+        user: 'Alessandro Rossi',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: '[Pacing Was Perfect] Short and intense! The Da Enzo lunch after the morning Colosseum walk was the highlight of our Rome trip.'
+      },
+      {
+        id: 'rev-plan-r2',
+        user: 'Liam O’Connor',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '3 weeks ago',
+        comment: '[Great Budget Tips] Refilling our water bottles at the Rome Nasoni street fountains saved us money in the hot summer sun.'
+      }
+    ]
   }
 ];
 

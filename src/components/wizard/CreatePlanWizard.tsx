@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Trip,
   Traveler,
@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Plus,
+  Minus,
   Trash2,
   Plane,
   Hotel as HotelIcon,
@@ -21,8 +22,20 @@ import {
   Check,
   ExternalLink,
   MapPin,
-  CalendarDays
+  CalendarDays,
+  AlertCircle,
+  Utensils,
+  Ticket,
+  Compass,
+  DollarSign,
+  TrendingUp,
+  Info
 } from 'lucide-react';
+import { CitySearchInput } from './CitySearchInput';
+import {
+  getDestinationBudgetProfile,
+  calculateBudgetBreakdown
+} from '../../utils/budgetUtils';
 
 interface CreatePlanWizardProps {
   initialDestination?: Destination | null;
@@ -52,8 +65,8 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Step 1: Trip basics
-  const [fromCountry, setFromCountry] = useState('United States');
   const [fromCity, setFromCity] = useState('San Francisco');
+  const [fromCountry, setFromCountry] = useState('United States');
   const [destinationCities, setDestinationCities] = useState<string[]>(
     templatePlan
       ? [templatePlan.destination_name]
@@ -61,8 +74,8 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
       ? [`${initialDestination.city}, ${initialDestination.country}`]
       : ['Kyoto, Japan']
   );
-  const [extraCityInput, setExtraCityInput] = useState('');
-  const [showAddCity, setShowAddCity] = useState(false);
+  const [destinationInput, setDestinationInput] = useState('');
+  const [step1Error, setStep1Error] = useState<string | null>(null);
 
   // Travel dates (implied duration)
   const [startDate, setStartDate] = useState('2026-10-12');
@@ -80,9 +93,51 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
   const diffTime = Math.abs(endD.getTime() - startD.getTime());
   const calculatedDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
 
-  // Step 2: Budget
+  // Flexible days changer that keeps startDate and adjusts endDate
+  const setDaysCount = (newDays: number) => {
+    const validDays = Math.max(1, Math.min(60, newDays));
+    const start = new Date(startDate);
+    if (!isNaN(start.getTime())) {
+      const end = new Date(start);
+      end.setDate(start.getDate() + validDays - 1);
+      const yyyy = end.getFullYear();
+      const mm = String(end.getMonth() + 1).padStart(2, '0');
+      const dd = String(end.getDate()).padStart(2, '0');
+      setEndDate(`${yyyy}-${mm}-${dd}`);
+    }
+  };
+
+  // Step 2: Destination-aware Budget & Dynamic Days calculation
   const [budgetTier, setBudgetTier] = useState<'backpacker' | 'balanced' | 'luxury'>('balanced');
-  const [budgetSliderVal, setBudgetSliderVal] = useState<number>(180);
+
+  const budgetProfile = useMemo(() => {
+    return getDestinationBudgetProfile(destinationCities);
+  }, [destinationCities]);
+
+  const [budgetSliderVal, setBudgetSliderVal] = useState<number>(() => {
+    const initialProfile = getDestinationBudgetProfile(
+      templatePlan
+        ? [templatePlan.destination_name]
+        : initialDestination
+        ? [`${initialDestination.city}, ${initialDestination.country}`]
+        : ['Kyoto, Japan']
+    );
+    return initialProfile.balanced.daily;
+  });
+
+  // Track if user explicitly customized the slider or when destination updates
+  const prevDestKeyRef = useRef<string>(destinationCities.join(','));
+  useEffect(() => {
+    const currentKey = destinationCities.join(',');
+    if (prevDestKeyRef.current !== currentKey) {
+      prevDestKeyRef.current = currentKey;
+      setBudgetSliderVal(budgetProfile[budgetTier].daily);
+    }
+  }, [destinationCities, budgetProfile, budgetTier]);
+
+  const budgetBreakdown = useMemo(() => {
+    return calculateBudgetBreakdown(budgetSliderVal, calculatedDays, budgetTier, budgetProfile);
+  }, [budgetSliderVal, calculatedDays, budgetTier, budgetProfile]);
 
   // Step 3: Travelers
   const [isGroup, setIsGroup] = useState<boolean>(false);
@@ -226,10 +281,25 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
 
   // Complete wizard
   const handleFinalize = () => {
+    const chosenCoverPhoto =
+      templatePlan?.cover_photo ||
+      initialDestination?.cover_photo ||
+      'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80';
+
+    const chosenGallery =
+      templatePlan?.gallery ||
+      initialDestination?.gallery || [
+        chosenCoverPhoto,
+        'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1200&q=80'
+      ];
+
     const newTrip: Trip = {
       id: `trip-${Date.now()}`,
       user_id: 'user-alex',
       title: tripTitle.trim() || `My Trip to ${destinationCities[0] || 'Kyoto'}`,
+      cover_photo: chosenCoverPhoto,
+      gallery: chosenGallery,
       origin: { country: fromCountry, city: fromCity },
       destinations: destinationCities,
       start_date: startDate,
@@ -256,6 +326,28 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
     };
 
     onFinish(newTrip);
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1) {
+      if (!fromCity.trim()) {
+        setStep1Error('Please enter or select an origin departure city.');
+        return;
+      }
+      if (destinationCities.length === 0) {
+        if (destinationInput.trim()) {
+          setDestinationCities([destinationInput.trim()]);
+          setDestinationInput('');
+          setStep1Error(null);
+          setCurrentStep(currentStep + 1);
+          return;
+        }
+        setStep1Error('Please add or select at least one destination city.');
+        return;
+      }
+      setStep1Error(null);
+    }
+    setCurrentStep(currentStep + 1);
   };
 
   return (
@@ -300,107 +392,124 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
         {/* STEP 1: Trip Basics */}
         {currentStep === 1 && (
           <div className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                  Origin Country
-                </label>
-                <input
-                  type="text"
-                  value={fromCountry}
-                  onChange={e => setFromCountry(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D9CFC2] text-sm focus:outline-none focus:border-[#0EA5A5] bg-[#FBF7F2]"
-                  placeholder="e.g. United States"
-                />
+            {step1Error && (
+              <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 font-medium animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{step1Error}</span>
               </div>
+            )}
 
-              <div>
-                <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                  Origin City
-                </label>
-                <input
-                  type="text"
-                  value={fromCity}
-                  onChange={e => setFromCity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D9CFC2] text-sm focus:outline-none focus:border-[#0EA5A5] bg-[#FBF7F2]"
-                  placeholder="e.g. San Francisco"
-                />
-              </div>
+            {/* Origin City only (Origin Country removed, guided bar enabled) */}
+            <div>
+              <CitySearchInput
+                id="input-origin-city"
+                label="Origin City"
+                value={fromCity}
+                onChange={val => {
+                  setFromCity(val);
+                  if (step1Error) setStep1Error(null);
+                }}
+                onSelectCity={item => {
+                  setFromCity(item.city);
+                  setFromCountry(item.country);
+                  if (step1Error) setStep1Error(null);
+                }}
+                onSubmitCustom={val => {
+                  setFromCity(val);
+                  if (step1Error) setStep1Error(null);
+                }}
+                placeholder="Type your departure city (e.g. San Francisco, Tokyo, London, Singapore)..."
+                icon="plane"
+                helperText="Type to search and select your departure city from the guided suggestions bar"
+              />
             </div>
 
-            {/* Destination Cities with multi-city support */}
-            <div>
-              <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                Destination City (Multi-city enabled)
+            {/* Destination Cities with multi-city support and guided bar */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-[#1F2937] flex items-center justify-between">
+                <span>Destination City</span>
+                {destinationCities.length > 0 && (
+                  <span className="text-[11px] font-medium text-[#0EA5A5]">
+                    {destinationCities.length} {destinationCities.length === 1 ? 'destination selected' : 'destinations selected'}
+                  </span>
+                )}
               </label>
-              <div className="space-y-2">
-                {destinationCities.map((city, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#D9CFC2] bg-[#FBF7F2] text-sm font-semibold text-[#1F2937]">
-                      <MapPin className="w-4 h-4 text-[#0EA5A5]" />
+
+              {/* Selected Destination Badges */}
+              {destinationCities.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {destinationCities.map((city, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#D9CFC2] bg-[#FBF7F2] text-xs font-bold text-[#1F2937] shadow-2xs"
+                    >
+                      <span className="w-4 h-4 rounded-full bg-[#0EA5A5]/15 text-[#0EA5A5] text-[10px] flex items-center justify-center font-bold">
+                        {idx + 1}
+                      </span>
+                      <MapPin className="w-3.5 h-3.5 text-[#0EA5A5] shrink-0" />
                       <span>{city}</span>
-                    </div>
-                    {destinationCities.length > 1 && (
                       <button
+                        type="button"
                         onClick={() =>
                           setDestinationCities(destinationCities.filter((_, i) => i !== idx))
                         }
-                        className="p-2.5 rounded-xl text-[#E85555] hover:bg-red-50 border border-[#D9CFC2] cursor-pointer"
+                        className="text-gray-400 hover:text-red-500 p-0.5 transition-colors cursor-pointer"
+                        title={`Remove ${city}`}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {showAddCity ? (
-                <div className="mt-2.5 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={extraCityInput}
-                    onChange={e => setExtraCityInput(e.target.value)}
-                    placeholder="e.g. Osaka, Japan or Paris, France"
-                    className="flex-1 px-3.5 py-2 rounded-xl border border-[#0EA5A5] text-sm bg-white"
-                  />
-                  <button
-                    onClick={() => {
-                      if (extraCityInput.trim()) {
-                        setDestinationCities([...destinationCities, extraCityInput.trim()]);
-                        setExtraCityInput('');
-                        setShowAddCity(false);
-                      }
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-[#0EA5A5] text-white text-xs font-bold cursor-pointer"
-                  >
-                    Add
-                  </button>
-                  <button
-                    onClick={() => setShowAddCity(false)}
-                    className="px-3 py-2 text-xs text-[#374151]"
-                  >
-                    Cancel
-                  </button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  id="btn-add-extra-city"
-                  onClick={() => setShowAddCity(true)}
-                  className="mt-2 text-xs font-bold text-[#0EA5A5] hover:underline inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add another destination city</span>
-                </button>
               )}
+
+              {/* Destination City typing input with guide bar */}
+              <CitySearchInput
+                id="input-destination-city"
+                value={destinationInput}
+                onChange={val => {
+                  setDestinationInput(val);
+                  if (step1Error) setStep1Error(null);
+                }}
+                onSelectCity={item => {
+                  const label = `${item.city}, ${item.country}`;
+                  if (!destinationCities.includes(label)) {
+                    setDestinationCities([...destinationCities, label]);
+                  }
+                  setDestinationInput('');
+                  if (step1Error) setStep1Error(null);
+                }}
+                onSubmitCustom={val => {
+                  if (val.trim() && !destinationCities.includes(val.trim())) {
+                    setDestinationCities([...destinationCities, val.trim()]);
+                    setDestinationInput('');
+                    if (step1Error) setStep1Error(null);
+                  }
+                }}
+                placeholder={
+                  destinationCities.length === 0
+                    ? "Type destination city (e.g. Kyoto, Paris, Rome, Bali)..."
+                    : "Type another destination city to add to itinerary..."
+                }
+                icon="map-pin"
+                excludeCities={destinationCities}
+                helperText="Type a city name to see suggested destinations and choose from the bar"
+              />
             </div>
 
             {/* Travel Dates */}
-            <div className="p-4 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2]/70">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#0EA5A5] mb-3">
-                <CalendarDays className="w-4 h-4" />
-                <span>TRAVEL DATES & IMPLIED DURATION</span>
+            <div className="p-4 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2]/70 space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-[#0EA5A5]">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  <span>TRAVEL DATES & DURATION</span>
+                </div>
+                <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-[#D9CFC2] text-[#1F2937] text-xs">
+                  <span className="font-extrabold text-[#0EA5A5]">{calculatedDays}</span>
+                  <span className="text-gray-500 font-medium">full travel days</span>
+                </div>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-semibold text-[#374151] mb-1">
@@ -425,83 +534,330 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
                   />
                 </div>
               </div>
-              <p className="text-xs text-[#374151] mt-3 font-medium">
-                Calculated stay: <strong className="text-[#1F2937]">{calculatedDays} full travel days</strong> (no redundant duration field needed).
-              </p>
+
+              {/* Flexible Days Presets & Stepper */}
+              <div className="pt-2 border-t border-[#E5DFD7] flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-[#4B5563]">Flexible days:</span>
+                  {[3, 5, 7, 10, 14, 21].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDaysCount(d)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        calculatedDays === d
+                          ? 'bg-[#0EA5A5] text-white border-[#0EA5A5] shadow-2xs'
+                          : 'bg-white text-[#374151] border-[#D9CFC2] hover:bg-gray-50'
+                      }`}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+
+                <div className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-[#D9CFC2]">
+                  <button
+                    type="button"
+                    onClick={() => setDaysCount(calculatedDays - 1)}
+                    disabled={calculatedDays <= 1}
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                    title="Decrease 1 day"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-xs font-bold text-[#1F2937] px-2">{calculatedDays} days</span>
+                  <button
+                    type="button"
+                    onClick={() => setDaysCount(calculatedDays + 1)}
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-gray-600 hover:bg-gray-100 cursor-pointer"
+                    title="Increase 1 day"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* STEP 2: Budget */}
+        {/* STEP 2: Budget (Destination & Days Flexible Calculation) */}
         {currentStep === 2 && (
-          <div className="pt-6 space-y-6">
-            <p className="text-xs text-[#374151] leading-relaxed">
-              Show average per-person budget for {destinationCities.join(', ')}, broken into Backpacker, Balanced, and Luxury tiers.
-            </p>
-
-            {/* 3 Budget Tier Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { id: 'backpacker', label: 'Backpacker', avg: '$65', slider: 65, desc: 'Hostels, local diners, transit passes' },
-                { id: 'balanced', label: 'Balanced', avg: '$175', slider: 175, desc: 'Boutique hotels, casual dining, booked tickets' },
-                { id: 'luxury', label: 'Luxury', avg: '$480+', slider: 480, desc: '5-star ryokans/hotels, Michelin tastings, private car' }
-              ].map(tier => (
-                <div
-                  key={tier.id}
-                  onClick={() => {
-                    setBudgetTier(tier.id as any);
-                    setBudgetSliderVal(tier.slider);
-                  }}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    budgetTier === tier.id
-                      ? 'border-[#0EA5A5] bg-[#0EA5A5]/5 ring-1 ring-[#0EA5A5]'
-                      : 'border-[#D9CFC2]/70 bg-[#FBF7F2] hover:border-[#0EA5A5]/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-[#1F2937]">{tier.label}</span>
-                    <span className="text-sm font-extrabold text-[#0EA5A5]">{tier.avg}</span>
+          <div className="pt-6 space-y-6 animate-fade-in">
+            {/* Destination Benchmark & Days Controller Banner */}
+            <div className="p-4 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2] space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#0EA5A5]" />
+                    <span className="text-xs font-bold text-[#1F2937]">
+                      {destinationCities.join(' • ')}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#0EA5A5]/10 text-[#0EA5A5] text-[10px] font-bold border border-[#0EA5A5]/20">
+                      {budgetProfile.tierName}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-[#374151]/80 leading-tight">{tier.desc}</p>
+                  <p className="text-[11px] text-[#4B5563] mt-1">
+                    {budgetProfile.tierDescription}
+                  </p>
                 </div>
-              ))}
+
+                {/* Flexible Days Changer inside Budget step */}
+                <div className="flex items-center gap-2 self-start sm:self-auto bg-white px-3 py-2 rounded-xl border border-[#D9CFC2] shadow-2xs">
+                  <Calendar className="w-3.5 h-3.5 text-[#0EA5A5]" />
+                  <span className="text-xs font-bold text-[#1F2937]">Trip Days:</span>
+                  <div className="flex items-center gap-1 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => setDaysCount(calculatedDays - 1)}
+                      disabled={calculatedDays <= 1}
+                      className="w-5 h-5 rounded flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                      title="Decrease by 1 day"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="text-xs font-extrabold text-[#0EA5A5] px-1 min-w-5 text-center">
+                      {calculatedDays}d
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setDaysCount(calculatedDays + 1)}
+                      className="w-5 h-5 rounded flex items-center justify-center text-gray-600 hover:bg-gray-100 cursor-pointer"
+                      title="Increase by 1 day"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Preset Days Chips */}
+              <div className="pt-2.5 border-t border-[#EFEAE2] flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-[#6B7280]">Flexible duration presets:</span>
+                  {[3, 5, 7, 10, 14, 21].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDaysCount(d)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        calculatedDays === d
+                          ? 'bg-[#0EA5A5] text-white border-[#0EA5A5] shadow-2xs'
+                          : 'bg-white text-[#374151] border-[#D9CFC2] hover:bg-gray-50'
+                      }`}
+                    >
+                      {d} Days
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[11px] text-[#6B7280] font-medium">
+                  Dates: {startDate} → {endDate}
+                </span>
+              </div>
             </div>
 
-            {/* Draggable Range Slider */}
-            <div className="p-5 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2]/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#1F2937]">Adjust Per-Person Daily Target:</span>
-                <span className="text-base font-extrabold text-[#FF6B4A] bg-white px-3 py-1 rounded-xl border border-[#D9CFC2]">
-                  ${budgetSliderVal} / day
+            {/* 3 Destination-Calibrated Budget Tier Cards */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <label className="text-xs font-bold text-[#1F2937]">
+                  Choose Budget Tier ({calculatedDays} Days in {destinationCities[0]?.split(',')[0] || 'Destination'})
+                </label>
+                <span className="text-[11px] text-[#0EA5A5] font-medium">
+                  Totals auto-scale with your {calculatedDays}-day stay
                 </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {(['backpacker', 'balanced', 'luxury'] as const).map(tierId => {
+                  const tierData = budgetProfile[tierId];
+                  const isSelected = budgetTier === tierId;
+                  const totalTripPerPerson = tierData.daily * calculatedDays;
+
+                  return (
+                    <div
+                      key={tierId}
+                      onClick={() => {
+                        setBudgetTier(tierId);
+                        setBudgetSliderVal(tierData.daily);
+                      }}
+                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-[#0EA5A5] bg-[#0EA5A5]/5 ring-2 ring-[#0EA5A5]/30 shadow-sm'
+                          : 'border-[#D9CFC2]/70 bg-[#FBF7F2] hover:border-[#0EA5A5]/50 hover:bg-white'
+                      }`}
+                    >
+                      <div>
+                        {/* Tier Title & Badges */}
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-bold text-[#1F2937] flex items-center gap-1.5">
+                            {tierData.label}
+                            {tierId === 'balanced' && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-[#0EA5A5]/15 text-[#0EA5A5] text-[9px] font-extrabold uppercase">
+                                Value
+                              </span>
+                            )}
+                          </span>
+                          {isSelected && (
+                            <span className="w-5 h-5 rounded-full bg-[#0EA5A5] text-white flex items-center justify-center">
+                              <Check className="w-3 h-3" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Daily Rate & Calculated Total */}
+                        <div className="mb-2">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-extrabold text-[#0EA5A5]">
+                              ${tierData.daily}
+                            </span>
+                            <span className="text-[11px] font-semibold text-gray-500">/ day</span>
+                          </div>
+                          <div className="inline-block mt-1 px-2 py-0.5 rounded-md bg-white border border-[#D9CFC2] text-xs font-bold text-[#1F2937]">
+                            ${totalTripPerPerson.toLocaleString()} total <span className="font-normal text-gray-500">({calculatedDays}d)</span>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-[#4B5563] leading-relaxed mb-3">
+                          {tierData.desc}
+                        </p>
+                      </div>
+
+                      {/* Destination specific inclusions */}
+                      <div className="pt-2.5 border-t border-[#E5DFD7] space-y-1.5 text-[11px] text-[#374151]">
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-semibold text-gray-900 shrink-0">Stay:</span>
+                          <span className="text-gray-600 line-clamp-1">{tierData.accommodation}</span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-semibold text-gray-900 shrink-0">Dining:</span>
+                          <span className="text-gray-600 line-clamp-1">{tierData.food}</span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-semibold text-gray-900 shrink-0">Sights:</span>
+                          <span className="text-gray-600 line-clamp-1">{tierData.activities}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Draggable Fine-Tune Range Slider with Real-time Trip Spending */}
+            <div className="p-5 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold text-[#1F2937] flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-[#0EA5A5]" />
+                    <span>Custom Daily Target Slider:</span>
+                  </span>
+                  <span className="text-[11px] text-gray-500">
+                    Adjust anywhere between ${budgetProfile.sliderMin} and ${budgetProfile.sliderMax}/day
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-extrabold text-[#FF6B4A] bg-white px-3 py-1 rounded-xl border border-[#D9CFC2] shadow-2xs">
+                    ${budgetSliderVal} / day
+                  </span>
+                </div>
               </div>
 
               <input
                 id="budget-range-slider"
                 type="range"
-                min="40"
-                max="800"
-                step="10"
+                min={budgetProfile.sliderMin}
+                max={budgetProfile.sliderMax}
+                step={budgetProfile.sliderStep}
                 value={budgetSliderVal}
                 onChange={e => {
                   const val = parseInt(e.target.value, 10);
                   setBudgetSliderVal(val);
-                  if (val <= 90) setBudgetTier('backpacker');
-                  else if (val <= 300) setBudgetTier('balanced');
-                  else setBudgetTier('luxury');
+                  if (val <= budgetProfile.backpacker.daily * 1.35) {
+                    setBudgetTier('backpacker');
+                  } else if (val <= budgetProfile.balanced.daily * 1.4) {
+                    setBudgetTier('balanced');
+                  } else {
+                    setBudgetTier('luxury');
+                  }
                 }}
                 className="w-full accent-[#FF6B4A] cursor-pointer"
               />
 
-              <div className="flex justify-between text-[11px] text-[#374151]/70 font-semibold">
-                <span>$40 (Hostel)</span>
-                <span>$180 (Comfortable)</span>
-                <span>$800 (Elite)</span>
+              <div className="flex justify-between text-[11px] text-[#4B5563] font-semibold">
+                <span>${budgetProfile.sliderMin} (Minimalist)</span>
+                <span>${budgetProfile.balanced.daily} (Benchmark)</span>
+                <span>${budgetProfile.sliderMax} (Elite)</span>
               </div>
 
-              <div className="pt-2 border-t border-[#D9CFC2]/50 flex justify-between text-xs text-[#374151]">
-                <span>Est. Total Trip Spend ({calculatedDays} days):</span>
-                <strong className="text-[#1F2937]">${budgetSliderVal * calculatedDays} per traveler</strong>
+              <div className="pt-3 border-t border-[#E5DFD7] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                <span className="text-gray-600">
+                  Total Trip Estimated Spend (<strong className="text-gray-900">{calculatedDays} full days</strong>):
+                </span>
+                <div className="flex items-center gap-2">
+                  <strong className="text-base font-extrabold text-[#1F2937]">
+                    ${(budgetSliderVal * calculatedDays).toLocaleString()}
+                  </strong>
+                  <span className="text-xs text-gray-500 font-medium">per traveler</span>
+                  {travelers.length > 1 && (
+                    <span className="text-[11px] text-[#0EA5A5] font-bold bg-[#0EA5A5]/10 px-2 py-0.5 rounded-md">
+                      (${(budgetSliderVal * calculatedDays * travelers.length).toLocaleString()} for {travelers.length} party)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Estimated Category Breakdown for this Destination & Days */}
+            <div className="p-4 rounded-2xl bg-white border border-[#D9CFC2] space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#1F2937] flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-[#0EA5A5]" />
+                  <span>Estimated Category Breakdown ({calculatedDays} Days in {destinationCities[0]?.split(',')[0] || 'Destination'})</span>
+                </span>
+                <span className="text-[11px] font-semibold text-[#0EA5A5]">
+                  ${(budgetSliderVal * calculatedDays).toLocaleString()} total spend
+                </span>
+              </div>
+
+              {/* Stacked Proportional Color Bar */}
+              <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-gray-100">
+                <div
+                  style={{ width: `${budgetBreakdown.categories[0].percent}%` }}
+                  className="bg-[#0EA5A5] h-full"
+                  title="Accommodations"
+                />
+                <div
+                  style={{ width: `${budgetBreakdown.categories[1].percent}%` }}
+                  className="bg-[#FF6B4A] h-full"
+                  title="Food & Dining"
+                />
+                <div
+                  style={{ width: `${budgetBreakdown.categories[2].percent}%` }}
+                  className="bg-[#F59E0B] h-full"
+                  title="Activities & Sights"
+                />
+                <div
+                  style={{ width: `${budgetBreakdown.categories[3].percent}%` }}
+                  className="bg-[#6366F1] h-full"
+                  title="Transit"
+                />
+              </div>
+
+              {/* 4 Category Pill Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                {budgetBreakdown.categories.map((cat, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl bg-[#FBF7F2] border border-[#EFEAE2]">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-[#374151] mb-1">
+                      <span className="truncate">{cat.name}</span>
+                      <span className="text-gray-400 text-[10px]">{cat.percent}%</span>
+                    </div>
+                    <div className="text-xs font-extrabold text-[#1F2937]">
+                      ${cat.daily} <span className="text-[10px] font-normal text-gray-500">/day</span>
+                    </div>
+                    <div className="text-[10px] text-[#0EA5A5] font-semibold mt-0.5">
+                      ${cat.total.toLocaleString()} total ({calculatedDays}d)
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -814,7 +1170,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
           {currentStep < 5 ? (
             <button
               id={`btn-wizard-next-step-${currentStep}`}
-              onClick={() => setCurrentStep(currentStep + 1)}
+              onClick={handleNext}
               className="px-6 py-2.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
             >
               <span>Continue</span>

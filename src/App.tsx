@@ -141,6 +141,14 @@ export default function App() {
     }
   };
 
+  // Add sample trip to My Plans
+  const handleAddSampleTrip = (templateKey?: string) => {
+    const newTrip = db.addSampleTrip(templateKey);
+    const updated = db.getTrips();
+    setTrips(updated);
+    setActiveTrip(newTrip);
+  };
+
   // Toggle like on any post item (destinations, hotels, restaurants, plans)
   const handleToggleLikeItem = (item: PostCardItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -236,6 +244,7 @@ export default function App() {
               setView('create-trip');
             }}
             onDeleteTrip={handleDeleteTrip}
+            onUpdateTrip={handleUpdateTrip}
           />
         )}
 
@@ -317,6 +326,10 @@ export default function App() {
                 subtitle: `${activeHotel.room_types.join(', ')}`
               })
             }
+            onHotelUpdated={(updated) => {
+              setActiveHotel(updated);
+              setAllPostCards(db.getAllPostCardItems());
+            }}
           />
         )}
 
@@ -342,6 +355,10 @@ export default function App() {
                 subtitle: `${activeRestaurant.cuisine} • ${activeRestaurant.price_level}`
               })
             }
+            onRestaurantUpdated={(updated) => {
+              setActiveRestaurant(updated);
+              setAllPostCards(db.getAllPostCardItems());
+            }}
           />
         )}
 
@@ -360,7 +377,8 @@ export default function App() {
                 coverPhoto: activePlan.cover_photo,
                 daysOfStay: `${activePlan.days} Days`,
                 budget: `$${activePlan.total_spend.toLocaleString()}`,
-                rating: 4.95,
+                rating: activePlan.rating || 4.95,
+                reviewsCount: activePlan.reviews_count || (activePlan.reviews ? activePlan.reviews.length : 0),
                 locationName: activePlan.destination_name,
                 mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activePlan.destination_name)}`,
                 authorName: activePlan.author_name,
@@ -370,6 +388,10 @@ export default function App() {
             }
             onToggleLike={() => handleToggleLikePlan(activePlan.id)}
             onUseAsTemplate={handleUseAsTemplate}
+            onPlanUpdated={(updated) => {
+              setActivePlan(updated);
+              setAllPostCards(db.getAllPostCardItems());
+            }}
           />
         )}
       </main>

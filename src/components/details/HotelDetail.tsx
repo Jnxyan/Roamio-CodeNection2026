@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Hotel } from '../../types';
 import {
   ArrowLeft,
@@ -11,21 +11,41 @@ import {
   DollarSign,
   ShieldCheck
 } from 'lucide-react';
+import { db } from '../../services/db';
+import { ReviewSection } from './ReviewSection';
 
 interface HotelDetailProps {
   hotel: Hotel;
   isSaved: boolean;
   onBack: () => void;
   onToggleSave: () => void;
+  onHotelUpdated?: (updated: Hotel) => void;
 }
 
 export const HotelDetail: React.FC<HotelDetailProps> = ({
   hotel,
   isSaved,
   onBack,
-  onToggleSave
+  onToggleSave,
+  onHotelUpdated
 }) => {
+  const [currentHotel, setCurrentHotel] = useState<Hotel>(hotel);
   const [selectedRoom, setSelectedRoom] = useState(hotel.room_types[0]);
+
+  useEffect(() => {
+    setCurrentHotel(hotel);
+    if (hotel.room_types && hotel.room_types.length > 0) {
+      setSelectedRoom(hotel.room_types[0]);
+    }
+  }, [hotel]);
+
+  const handleReviewSubmit = (reviewData: { user: string; rating: number; comment: string }) => {
+    const updated = db.addHotelReview(currentHotel.id, reviewData);
+    if (updated) {
+      setCurrentHotel(updated);
+      if (onHotelUpdated) onHotelUpdated(updated);
+    }
+  };
 
   return (
     <div id="hotel-detail-page" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -144,8 +164,8 @@ export const HotelDetail: React.FC<HotelDetailProps> = ({
             <span>GUEST RATING</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xl font-extrabold text-[#1F2937]">{hotel.rating.toFixed(2)}</span>
-            <span className="text-xs text-[#374151]">({hotel.reviews_count} reviews)</span>
+            <span className="text-xl font-extrabold text-[#1F2937]">{currentHotel.rating.toFixed(2)}</span>
+            <span className="text-xs text-[#374151]">({currentHotel.reviews_count || (currentHotel.reviews ? currentHotel.reviews.length : 0)} reviews)</span>
           </div>
           <div className="mt-1 flex items-center gap-1 text-[11px] text-[#2FBF71] font-semibold">
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -155,13 +175,13 @@ export const HotelDetail: React.FC<HotelDetailProps> = ({
       </div>
 
       {/* Main Content: Room Types & Amenities */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
         <div className="lg:col-span-2 space-y-6">
           {/* Room Types */}
           <div className="bg-white p-6 rounded-2xl border border-[#D9CFC2]">
             <h2 className="text-lg font-bold text-[#1F2937] mb-4 font-display">Available Room Types</h2>
             <div className="space-y-3">
-              {hotel.room_types.map((room, idx) => (
+              {currentHotel.room_types.map((room, idx) => (
                 <div
                   key={idx}
                   onClick={() => setSelectedRoom(room)}
@@ -177,7 +197,7 @@ export const HotelDetail: React.FC<HotelDetailProps> = ({
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-bold text-[#FF6B4A]">
-                      ${hotel.pricing.per_night + idx * 45}
+                      ${currentHotel.pricing.per_night + idx * 45}
                     </span>
                     <span className="text-[11px] text-[#374151] block">/ night</span>
                   </div>
@@ -190,7 +210,7 @@ export const HotelDetail: React.FC<HotelDetailProps> = ({
           <div className="bg-white p-6 rounded-2xl border border-[#D9CFC2]">
             <h2 className="text-lg font-bold text-[#1F2937] mb-4 font-display">Featured Amenities</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {hotel.amenities.map((item, idx) => (
+              {currentHotel.amenities.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-[#1F2937] p-2.5 rounded-xl bg-[#FBF7F2] border border-[#D9CFC2]/60">
                   <CheckCircle2 className="w-4 h-4 text-[#0EA5A5] shrink-0" />
                   <span>{item}</span>
@@ -221,7 +241,7 @@ export const HotelDetail: React.FC<HotelDetailProps> = ({
 
             <a
               id="btn-hotel-direct-book"
-              href={hotel.booking_link}
+              href={currentHotel.booking_link}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-3 rounded-xl bg-[#FF6B4A] hover:bg-[#E85837] text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all"
@@ -232,6 +252,21 @@ export const HotelDetail: React.FC<HotelDetailProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Guest Reviews Section */}
+      <ReviewSection
+        entityId={currentHotel.id}
+        entityName={currentHotel.name}
+        entityType="hotel"
+        rating={currentHotel.rating}
+        reviews={currentHotel.reviews || []}
+        reviewsCount={currentHotel.reviews_count || (currentHotel.reviews ? currentHotel.reviews.length : 0)}
+        title="Guest Reviews & Ratings"
+        subtitle={`Verified guest feedback and stays at ${currentHotel.name}`}
+        verifiedBadgeText="Verified Hotel Stay"
+        commentPlaceholder="Describe your stay, room comfort, quietness, breakfast, and staff service..."
+        onSubmitReview={handleReviewSubmit}
+      />
     </div>
   );
 };
