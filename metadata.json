@@ -1,0 +1,6 @@
+{
+  "name": "Roamio",
+  "description": "Smart travel planner web app to discover destinations, hotels, and restaurants, create trips, and build 24-hour itineraries with 15-minute snapping.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
