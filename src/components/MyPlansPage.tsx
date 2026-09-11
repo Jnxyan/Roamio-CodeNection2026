@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trip, Destination } from '../types';
+import { Trip, Destination, User } from '../types';
 import { db } from '../services/db';
 import {
   MapPin,
@@ -9,7 +9,8 @@ import {
   Sparkles,
   Clock,
   Trash2,
-  Users
+  Users,
+  UserCheck
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TripDetail } from './details/TripDetail';
@@ -18,6 +19,7 @@ import { getTripCoverImage } from '../utils/tripImageUtils';
 interface MyPlansPageProps {
   trips: Trip[];
   activeTripId?: string;
+  currentUser?: User | null;
   onOpenTrip: (trip: Trip) => void;
   onCreateNew: () => void;
   onDeleteTrip: (tripId: string) => void;
@@ -28,6 +30,7 @@ interface MyPlansPageProps {
 export const MyPlansPage: React.FC<MyPlansPageProps> = ({
   trips = [],
   activeTripId,
+  currentUser,
   onOpenTrip,
   onCreateNew,
   onDeleteTrip,
@@ -36,7 +39,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
 }) => {
   // Synchronized state with props and db
   const [localTrips, setLocalTrips] = useState<Trip[]>(() => {
-    return Array.isArray(trips) && trips.length > 0 ? trips : db.getTrips();
+    return Array.isArray(trips) && trips.length > 0 ? trips : db.getTripsForUser(currentUser);
   });
 
   // Keep localTrips in sync whenever trips prop updates
@@ -225,6 +228,61 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                       {trip.start_date} → {trip.end_date}
                       {trip.origin?.city ? ` • From ${trip.origin.city}` : ''}
                     </p>
+
+                    {/* Shared / Co-Planning Indicators */}
+                    {(() => {
+                      const userEmail = currentUser?.email?.toLowerCase();
+                      const userId = currentUser?.id;
+                      const isSharedWithMe = Boolean(
+                        userEmail && (
+                          (trip.invited_users?.some(u => u.email.toLowerCase() === userEmail || u.id === userId)) ||
+                          (trip.collaborator_emails?.some(e => e.toLowerCase() === userEmail))
+                        ) &&
+                        (trip.user_id !== userId && trip.owner_email?.toLowerCase() !== userEmail)
+                      );
+
+                      if (isSharedWithMe) {
+                        return (
+                          <div className="mt-2.5 p-2 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5 text-xs text-[#086666] font-bold">
+                              <Users className="w-3.5 h-3.5 text-[#0EA5A5] shrink-0" />
+                              <span className="truncate">Shared Plan • Co-editor</span>
+                            </div>
+                            <span className="text-[10px] text-[#374151]/70 truncate shrink-0">
+                              By {trip.owner_name || 'Alex'}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (trip.invited_users && trip.invited_users.length > 0) {
+                        return (
+                          <div className="mt-2.5 flex items-center justify-between gap-2 text-xs pt-1">
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex items-center -space-x-1.5">
+                                {trip.invited_users.slice(0, 3).map((u, i) => (
+                                  <img
+                                    key={u.email || i}
+                                    src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
+                                    alt={u.name}
+                                    title={`${u.name} (Co-editor)`}
+                                    className="w-5 h-5 rounded-full border border-white object-cover shadow-2xs"
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-[11px] text-[#374151]/80 font-semibold">
+                                {trip.invited_users.length} co-planner{trip.invited_users.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-extrabold text-[#0EA5A5] bg-[#0EA5A5]/10 px-2 py-0.5 rounded-md">
+                              Co-editing
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })()}
                   </div>
 
                   {/* Bottom Section: Scheduled Activities & View Details */}

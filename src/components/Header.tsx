@@ -8,7 +8,7 @@ interface HeaderProps {
   savedCount: number;
   plansCount: number;
   activeTab: string;
-  onNavigate: (tab: 'home' | 'saved' | 'my-plans' | 'create-trip' | 'login') => void;
+  onNavigate: (tab: 'home' | 'saved' | 'my-plans' | 'create-trip' | 'login' | 'profile') => void;
   onLogout: () => void;
 }
 
@@ -155,11 +155,26 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="py-1">
                   <button
+                    id="btn-nav-profile"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      onNavigate('profile');
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2.5 cursor-pointer ${
+                      activeTab === 'profile'
+                        ? 'bg-[#0EA5A5] text-white font-bold'
+                        : 'text-[#1F2937] hover:bg-[#FBF7F2]'
+                    }`}
+                  >
+                    <UserIcon className={`w-3.5 h-3.5 ${activeTab === 'profile' ? 'text-white' : 'text-[#0EA5A5]'}`} />
+                    <span>My Profile & Interests</span>
+                  </button>
+                  <button
                     onClick={() => {
                       setProfileDropdownOpen(false);
                       onNavigate('my-plans');
                     }}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold text-[#1F2937] hover:bg-[#FBF7F2] rounded-lg transition-colors flex items-center gap-2.5"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-[#1F2937] hover:bg-[#FBF7F2] rounded-lg transition-colors flex items-center gap-2.5 cursor-pointer"
                   >
                     <MapPin className="w-3.5 h-3.5 text-[#0EA5A5]" />
                     <span>My Trips & Plans ({plansCount})</span>
@@ -169,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
                       setProfileDropdownOpen(false);
                       onNavigate('saved');
                     }}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold text-[#1F2937] hover:bg-[#FBF7F2] rounded-lg transition-colors flex items-center gap-2.5"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-[#1F2937] hover:bg-[#FBF7F2] rounded-lg transition-colors flex items-center gap-2.5 cursor-pointer"
                   >
                     <Bookmark className="w-3.5 h-3.5 text-[#0EA5A5]" />
                     <span>Saved Favorites ({savedCount})</span>
@@ -233,6 +248,15 @@ export const Header: React.FC<HeaderProps> = ({
               {plansCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => onNavigate(currentUser ? 'profile' : 'login')}
+          className={`flex flex-col items-center gap-0.5 text-xs font-semibold ${
+            activeTab === 'profile' ? 'text-[#0EA5A5]' : 'text-[#374151]'
+          }`}
+        >
+          <UserIcon className="w-5 h-5" />
+          <span>Profile</span>
         </button>
       </div>
     </header>

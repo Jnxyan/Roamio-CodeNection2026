@@ -15,8 +15,6 @@ import {
   Hotel as HotelIcon,
   Sparkles,
   Sliders,
-  Users,
-  User as UserIcon,
   Calendar,
   Check,
   ExternalLink,
@@ -26,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ALL_LOCATION_OPTIONS, parseCityAndCountry } from '../../data/worldLocations';
 import { SearchableLocationInput } from './SearchableLocationInput';
+import { db } from '../../services/db';
 
 interface CreatePlanWizardProps {
   initialDestination?: Destination | null;
@@ -33,18 +32,6 @@ interface CreatePlanWizardProps {
   onCancel: () => void;
   onFinish: (trip: Trip) => void;
 }
-
-const INTEREST_TAGS = [
-  'Culture',
-  'Food & Gastronomy',
-  'Nature & Hiking',
-  'Photography',
-  'Relaxation & Spas',
-  'Architecture',
-  'Nightlife & Bars',
-  'Adventure',
-  'Shopping & Crafts'
-];
 
 export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
   initialDestination,
@@ -94,18 +81,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
   const [budgetTier, setBudgetTier] = useState<'backpacker' | 'balanced' | 'luxury'>('balanced');
   const [budgetSliderVal, setBudgetSliderVal] = useState<number>(180);
 
-  // Step 3: Travelers
-  const [isGroup, setIsGroup] = useState<boolean>(false);
-  const [travelers, setTravelers] = useState<Traveler[]>([
-    {
-      id: 't-1',
-      name: 'Alex Rivera',
-      age: 29,
-      interests: ['Culture', 'Food & Gastronomy', 'Photography']
-    }
-  ]);
-
-  // Step 4: Combined Flight + Hotel Suggestions
+  // Step 3: Combined Flight + Hotel Suggestions
   const primaryDestName = destinationCities[0] || 'Kyoto, Japan';
   const flightHotelPackages: FlightHotelSuggestion[] = [
     {
@@ -194,7 +170,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
 
   const [selectedPackage, setSelectedPackage] = useState<FlightHotelSuggestion>(flightHotelPackages[1]);
 
-  // Step 5: Trip title + planning mode
+  // Step 4: Trip title + planning mode
   const [tripTitle, setTripTitle] = useState(
     templatePlan
       ? `${templatePlan.title} (My Plan)`
@@ -202,44 +178,22 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
   );
   const [planningMode, setPlanningMode] = useState<'auto' | 'manual'>('auto');
 
-  // Handle adding traveler
-  const handleAddTraveler = () => {
-    const newId = `t-${travelers.length + 1}`;
-    setTravelers([
-      ...travelers,
-      {
-        id: newId,
-        name: `Traveler ${travelers.length + 1}`,
-        age: 28,
-        interests: ['Food & Gastronomy', 'Relaxation & Spas']
-      }
-    ]);
-  };
-
-  const handleRemoveTraveler = (id: string) => {
-    if (travelers.length <= 1) return;
-    setTravelers(travelers.filter(t => t.id !== id));
-  };
-
-  const handleUpdateTravelerInterests = (id: string, interest: string) => {
-    setTravelers(
-      travelers.map(t => {
-        if (t.id !== id) return t;
-        const exists = t.interests.includes(interest);
-        const updated = exists
-          ? t.interests.filter(i => i !== interest)
-          : [...t.interests, interest];
-        return { ...t, interests: updated };
-      })
-    );
-  };
-
   // Complete wizard
   const handleFinalize = () => {
     const originParsed = parseCityAndCountry(originLocation);
+    const currentUser = db.getCurrentUser();
+    const defaultTraveler: Traveler = {
+      id: currentUser?.id || 't-1',
+      name: currentUser?.name || 'Alex Rivera',
+      age: 29,
+      interests: (currentUser?.interests && currentUser.interests.length > 0)
+        ? currentUser.interests
+        : ['Culture', 'Food & Gastronomy', 'Photography']
+    };
+
     const newTrip: Trip = {
       id: `trip-${Date.now()}`,
-      user_id: 'user-alex',
+      user_id: currentUser?.id || 'user-alex',
       title: tripTitle.trim() || `My Trip to ${destinationCities[0] || 'Kyoto'}`,
       origin: originParsed.city ? originParsed : undefined,
       destinations: destinationCities.length > 0 ? destinationCities : [destinationLocation.trim() || 'Kyoto, Japan'],
@@ -248,8 +202,8 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
       days: calculatedDays,
       budget_tier: budgetTier,
       budget_amount: budgetSliderVal,
-      travelers,
-      is_group: isGroup,
+      travelers: [defaultTraveler],
+      is_group: false,
       mode: planningMode,
       combined_package: selectedPackage,
       itinerary: [], // Will be populated by Auto-generation logic if mode === 'auto'
@@ -283,14 +237,13 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
             </button>
             <div>
               <span className="text-xs font-bold text-[#0EA5A5] uppercase tracking-wider">
-                Step {currentStep} of 5
+                Step {currentStep} of 4
               </span>
               <h2 className="text-xl font-extrabold text-[#1F2937] font-display">
                 {currentStep === 1 && 'Trip Basics & Route'}
                 {currentStep === 2 && 'Budget & Spending Tier'}
-                {currentStep === 3 && 'Traveler Profiles & Interests'}
-                {currentStep === 4 && 'Flight & Hotel Matches'}
-                {currentStep === 5 && 'Trip Title & Planning Mode'}
+                {currentStep === 3 && 'Flight & Hotel Matches'}
+                {currentStep === 4 && 'Trip Title & Planning Mode'}
               </h2>
             </div>
           </div>
@@ -304,7 +257,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
         <div className="w-full bg-[#EFEAE2] h-2 rounded-full mt-4 overflow-hidden">
           <div
             className="bg-[#0EA5A5] h-full transition-all duration-300 rounded-full"
-            style={{ width: `${(currentStep / 5) * 100}%` }}
+            style={{ width: `${(currentStep / 4) * 100}%` }}
           />
         </div>
 
@@ -539,148 +492,8 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
           </div>
         )}
 
-        {/* STEP 3: Travelers */}
+        {/* STEP 3: Flights + Hotels (Combined) - Minimal, NO ADS */}
         {currentStep === 3 && (
-          <div className="pt-6 space-y-6">
-            {/* Solo vs Group Toggle */}
-            <div>
-              <label className="block text-xs font-bold text-[#1F2937] mb-2">
-                Travel Party Type
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  id="btn-party-solo"
-                  onClick={() => {
-                    setIsGroup(false);
-                    if (travelers.length > 1) setTravelers([travelers[0]]);
-                  }}
-                  className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
-                    !isGroup
-                      ? 'border-[#0EA5A5] bg-[#0EA5A5]/10 text-[#086666]'
-                      : 'border-[#D9CFC2] bg-[#FBF7F2] text-[#374151]'
-                  }`}
-                >
-                  <UserIcon className="w-4 h-4" />
-                  <span>Solo Traveler</span>
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-party-group"
-                  onClick={() => setIsGroup(true)}
-                  className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
-                    isGroup
-                      ? 'border-[#0EA5A5] bg-[#0EA5A5]/10 text-[#086666]'
-                      : 'border-[#D9CFC2] bg-[#FBF7F2] text-[#374151]'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Group Travel</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Travelers list */}
-            <div className="space-y-4">
-              {travelers.map((t, index) => (
-                <div key={t.id} className="p-4 rounded-2xl bg-[#FBF7F2] border border-[#D9CFC2]/80 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-[#0EA5A5] uppercase">
-                      Traveler {index + 1}
-                    </span>
-                    {isGroup && travelers.length > 1 && (
-                      <button
-                        onClick={() => handleRemoveTraveler(t.id)}
-                        className="text-xs text-[#E85555] hover:underline"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#374151] mb-1">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        value={t.name}
-                        onChange={e =>
-                          setTravelers(
-                            travelers.map(tr => (tr.id === t.id ? { ...tr, name: e.target.value } : tr))
-                          )
-                        }
-                        className="w-full px-3 py-1.5 rounded-xl border border-[#D9CFC2] text-xs bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#374151] mb-1">
-                        Age (feeds recommendation engine)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="105"
-                        value={t.age}
-                        onChange={e =>
-                          setTravelers(
-                            travelers.map(tr =>
-                              tr.id === t.id ? { ...tr, age: parseInt(e.target.value, 10) || 25 } : tr
-                            )
-                          )
-                        }
-                        className="w-full px-3 py-1.5 rounded-xl border border-[#D9CFC2] text-xs bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#374151] mb-1.5">
-                      Travel Interests (Tap to select):
-                    </label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {INTEREST_TAGS.map(tag => {
-                        const selected = t.interests.includes(tag);
-                        return (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => handleUpdateTravelerInterests(t.id, tag)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                              selected
-                                ? 'bg-[#0EA5A5] text-white'
-                                : 'bg-white text-[#374151] border border-[#D9CFC2]'
-                            }`}
-                          >
-                            {selected && '✓ '}
-                            {tag}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {isGroup && (
-                <button
-                  type="button"
-                  id="btn-add-traveler"
-                  onClick={handleAddTraveler}
-                  className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#0EA5A5]/60 text-xs font-bold text-[#0EA5A5] hover:bg-[#0EA5A5]/5 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add another traveler to party</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Flights + Hotels (Combined) - Minimal, NO ADS */}
-        {currentStep === 4 && (
           <div className="pt-6 space-y-4">
             <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-xs text-[#086666]">
               <strong>Minimal Curated Packages:</strong> Up to 3 combined flight & hotel options paired specifically for {primaryDestName}. No pop-ups, zero third-party banners or advertisements.
@@ -760,8 +573,8 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
           </div>
         )}
 
-        {/* STEP 5: Trip Title + Planning Mode */}
-        {currentStep === 5 && (
+        {/* STEP 4: Trip Title + Planning Mode */}
+        {currentStep === 4 && (
           <div className="pt-6 space-y-6">
             <div>
               <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
@@ -797,7 +610,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
                   </div>
                   <h4 className="text-base font-bold text-[#1F2937]">Help me plan</h4>
                   <p className="text-xs text-[#374151] mt-1 leading-relaxed">
-                    Auto-generates a full {calculatedDays}-day schedule based on your traveler ages and stated interests. Inserts lunch (12:00–14:00) and dinner (18:00–20:00) with 15-minute snapping.
+                    Auto-generates a full {calculatedDays}-day schedule based on your destination and curated spots. Inserts lunch (12:00–14:00) and dinner (18:00–20:00) with 15-minute snapping.
                   </p>
                 </div>
 
@@ -843,7 +656,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
             </button>
           )}
 
-          {currentStep < 5 ? (
+          {currentStep < 4 ? (
             <button
               id={`btn-wizard-next-step-${currentStep}`}
               onClick={() => {

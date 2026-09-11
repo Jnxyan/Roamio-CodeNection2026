@@ -8,7 +8,8 @@ import {
   Traveler,
   ItineraryItem,
   DiscoverablePlace,
-  Review
+  Review,
+  TripCollaborator
 } from '../types';
 import {
   INITIAL_DESTINATIONS,
@@ -62,12 +63,23 @@ class RoamioDataStore {
         const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
         if (storedUser) {
           try {
-            this.currentUser = JSON.parse(storedUser);
+            const parsed = JSON.parse(storedUser);
+            this.currentUser = {
+              ...DEMO_USERS[0],
+              ...parsed,
+              interests: Array.isArray(parsed?.interests) && parsed.interests.length > 0
+                ? parsed.interests
+                : (DEMO_USERS[0].interests || ['Culture', 'Food & Dining', 'Photography']),
+              password: parsed?.password || DEMO_USERS[0].password || 'roamio2026',
+              bio: parsed?.bio !== undefined ? parsed.bio : DEMO_USERS[0].bio,
+              homeLocation: parsed?.homeLocation !== undefined ? parsed.homeLocation : DEMO_USERS[0].homeLocation,
+              joinedDate: parsed?.joinedDate || DEMO_USERS[0].joinedDate || 'March 2025'
+            };
           } catch {
-            this.currentUser = DEMO_USERS[0];
+            this.currentUser = { ...DEMO_USERS[0] };
           }
         } else {
-          this.currentUser = DEMO_USERS[0];
+          this.currentUser = { ...DEMO_USERS[0] };
           try {
             localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(this.currentUser));
           } catch {
@@ -81,6 +93,39 @@ class RoamioDataStore {
           try {
             const parsed = JSON.parse(storedTrips);
             this.trips = Array.isArray(parsed) ? parsed : [];
+            // Ensure invited_users and owner information are normalized
+            this.trips.forEach(t => {
+              if (!Array.isArray(t.invited_users)) {
+                t.invited_users = [];
+              }
+              if (!Array.isArray(t.collaborator_emails)) {
+                t.collaborator_emails = [];
+              }
+              if (!t.owner_name) {
+                t.owner_name = t.user_id === 'user-alex' ? 'Alex Rivera' : 'Trip Creator';
+                t.owner_email = t.user_id === 'user-alex' ? 'alex@roamio.travel' : 'creator@roamio.travel';
+              }
+            });
+
+            // Ensure the demo Kyoto plan has Janice Ng invited if not already
+            const kyotoTrip = this.trips.find(t => t.id === 'trip-my-kyoto-autumn');
+            if (kyotoTrip && (!kyotoTrip.invited_users || kyotoTrip.invited_users.length === 0)) {
+              kyotoTrip.owner_name = 'Alex Rivera';
+              kyotoTrip.owner_email = 'alex@roamio.travel';
+              kyotoTrip.invited_users = [
+                {
+                  id: 'user-janice',
+                  name: 'Janice Ng',
+                  email: 'janiceng040803@gmail.com',
+                  username: 'janiceng',
+                  avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
+                  role: 'editor',
+                  invited_at: '2026-09-10T12:00:00.000Z',
+                  accepted: true
+                }
+              ];
+              kyotoTrip.collaborator_emails = ['janiceng040803@gmail.com'];
+            }
           } catch {
             this.trips = [];
           }
@@ -209,6 +254,21 @@ class RoamioDataStore {
     return {
       id: 'trip-my-kyoto-autumn',
       user_id: 'user-alex',
+      owner_name: 'Alex Rivera',
+      owner_email: 'alex@roamio.travel',
+      invited_users: [
+        {
+          id: 'user-janice',
+          name: 'Janice Ng',
+          email: 'janiceng040803@gmail.com',
+          username: 'janiceng',
+          avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
+          role: 'editor',
+          invited_at: '2026-09-10T12:00:00.000Z',
+          accepted: true
+        }
+      ],
+      collaborator_emails: ['janiceng040803@gmail.com'],
       title: 'Autumn in Kyoto Cultural Adventure',
       origin: { country: 'United States', city: 'San Francisco' },
       destinations: ['Kyoto, Japan'],
@@ -324,32 +384,143 @@ class RoamioDataStore {
     this.currentUser = user;
     if (user) {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      this.registerKnownUser(user);
     } else {
       localStorage.removeItem(STORAGE_KEYS.USER);
     }
   }
 
-  login(emailOrUsername: string, _password?: string): User {
+  getKnownUsers(): User[] {
+    const defaultList: User[] = [...DEMO_USERS];
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(STORAGE_KEYS.USERS_LIST);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(u => {
+              if (u && u.email && !defaultList.some(d => d.email.toLowerCase() === u.email.toLowerCase())) {
+                defaultList.push(u);
+              }
+            });
+          }
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    return defaultList;
+  }
+
+  registerKnownUser(user: User): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const currentList = this.getKnownUsers();
+        const exists = currentList.some(u => u.email.toLowerCase() === user.email.toLowerCase() || u.id === user.id);
+        if (!exists) {
+          const updated = [...currentList, user];
+          localStorage.setItem(STORAGE_KEYS.USERS_LIST, JSON.stringify(updated));
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  findUserByEmailOrUsername(query: string): User | null {
+    if (!query) return null;
+    const clean = query.trim().toLowerCase();
+    const all = this.getKnownUsers();
+    return all.find(u =>
+      u.email.toLowerCase() === clean ||
+      u.name.toLowerCase() === clean ||
+      u.name.toLowerCase().replace(/\s+/g, '') === clean.replace(/\s+/g, '') ||
+      (u.id && u.id.toLowerCase() === clean)
+    ) || null;
+  }
+
+  login(emailOrUsername: string, password?: string): User {
+    const clean = (emailOrUsername || '').trim().toLowerCase();
+    const known = this.findUserByEmailOrUsername(clean);
+    
+    if (known) {
+      const loggedInUser: User = {
+        ...known,
+        password: password || known.password || 'roamio2026'
+      };
+      this.setCurrentUser(loggedInUser);
+      return loggedInUser;
+    }
+
+    const isDemo = clean.includes('alex') || clean === 'alex@roamio.travel';
+    const existing = this.currentUser;
     const user: User = {
-      id: `user-${Date.now()}`,
-      name: emailOrUsername.includes('@') ? emailOrUsername.split('@')[0] : emailOrUsername,
-      email: emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@roamio.travel`,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
+      id: isDemo ? 'user-alex' : (existing?.id || `user-${Date.now()}`),
+      name: isDemo ? 'Alex Rivera' : (emailOrUsername.includes('@') ? emailOrUsername.split('@')[0] : emailOrUsername),
+      email: isDemo ? 'alex@roamio.travel' : (emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@roamio.travel`),
+      phone: isDemo ? (existing?.phone || '+1 415-555-0192') : (existing?.phone || ''),
+      avatar: isDemo
+        ? (existing?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80')
+        : (existing?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
+      bio: existing?.bio || 'Passionate traveler exploring culture, scenic nature and culinary discoveries.',
+      homeLocation: existing?.homeLocation || 'San Francisco, United States',
+      interests: (existing?.interests && existing.interests.length > 0)
+        ? existing.interests
+        : ['Culture', 'Food & Dining', 'Photography', 'Architecture'],
+      password: password || existing?.password || 'roamio2026',
+      joinedDate: existing?.joinedDate || 'March 2025'
     };
     this.setCurrentUser(user);
     return user;
   }
 
-  signUp(email: string, _password?: string, name?: string, phone?: string): User {
+  signUp(email: string, password?: string, name?: string, phone?: string): User {
     const user: User = {
       id: `user-${Date.now()}`,
       name: name || (email.includes('@') ? email.split('@')[0] : 'Traveler'),
       email,
-      phone,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
+      phone: phone || '',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      bio: 'New Roamio explorer planning exciting adventures.',
+      homeLocation: '',
+      interests: ['Culture', 'Food & Dining', 'Photography'],
+      password: password || 'roamio2026',
+      joinedDate: 'Just joined'
     };
     this.setCurrentUser(user);
     return user;
+  }
+
+  updateUserProfile(updates: Partial<User>): User {
+    if (!this.currentUser) {
+      this.currentUser = { ...DEMO_USERS[0], ...updates };
+    } else {
+      this.currentUser = {
+        ...this.currentUser,
+        ...updates
+      };
+    }
+    this.setCurrentUser(this.currentUser);
+    return this.currentUser;
+  }
+
+  changePassword(currentPassword: string, newPassword: string): { success: boolean; error?: string } {
+    if (!this.currentUser) {
+      return { success: false, error: 'No user is currently signed in.' };
+    }
+    const currentActualPassword = this.currentUser.password || 'roamio2026';
+    if (currentPassword !== currentActualPassword) {
+      return { success: false, error: 'The current password you entered is incorrect.' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'New password must be at least 6 characters long.' };
+    }
+    this.currentUser = {
+      ...this.currentUser,
+      password: newPassword
+    };
+    this.setCurrentUser(this.currentUser);
+    return { success: true };
   }
 
   logout(): void {
@@ -650,6 +821,163 @@ class RoamioDataStore {
       this.trips = [];
     }
     return [...this.trips];
+  }
+
+  getTripsForUser(user?: User | null): Trip[] {
+    const all = this.getTrips();
+    if (!user) {
+      return all;
+    }
+
+    const userEmail = (user.email || '').toLowerCase().trim();
+    const userName = (user.name || '').toLowerCase().trim();
+    const userId = user.id;
+
+    return all.filter(t => {
+      // 1. Owner match
+      if (t.user_id === userId) return true;
+      if (t.owner_email && t.owner_email.toLowerCase() === userEmail) return true;
+
+      // 2. Invited collaborator match
+      if (Array.isArray(t.invited_users)) {
+        const isInvited = t.invited_users.some(inv =>
+          (inv.email && inv.email.toLowerCase() === userEmail) ||
+          (inv.username && inv.username.toLowerCase() === userName) ||
+          (inv.name && inv.name.toLowerCase() === userName) ||
+          (inv.id && inv.id === userId)
+        );
+        if (isInvited) return true;
+      }
+
+      if (Array.isArray(t.collaborator_emails)) {
+        if (t.collaborator_emails.some(em => em.toLowerCase() === userEmail)) return true;
+      }
+
+      // 3. Fallback for demo user 'user-alex' if trip has no explicit owner
+      if (userId === 'user-alex' && (!t.user_id || t.user_id === 'user-alex')) {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
+  inviteUserToTrip(
+    tripId: string,
+    emailOrUsername: string,
+    role: 'editor' | 'viewer' = 'editor'
+  ): { success: boolean; trip: Trip; collaborator: TripCollaborator; message: string; isNewUser?: boolean } {
+    const trip = this.getTripById(tripId);
+    if (!trip) {
+      throw new Error(`Trip not found with id: ${tripId}`);
+    }
+
+    if (!Array.isArray(trip.invited_users)) {
+      trip.invited_users = [];
+    }
+    if (!Array.isArray(trip.collaborator_emails)) {
+      trip.collaborator_emails = [];
+    }
+
+    const cleanInput = emailOrUsername.trim();
+    if (!cleanInput) {
+      throw new Error('Please enter a valid email address or username');
+    }
+
+    // Find if user is in known users (DEMO_USERS or USERS_LIST)
+    const knownUser = this.findUserByEmailOrUsername(cleanInput);
+
+    // Check if already invited
+    const existingIndex = trip.invited_users.findIndex(
+      u => (u.email && u.email.toLowerCase() === cleanInput.toLowerCase()) ||
+           (u.username && u.username.toLowerCase() === cleanInput.toLowerCase()) ||
+           (knownUser && u.id === knownUser.id)
+    );
+
+    let collaborator: TripCollaborator;
+
+    if (existingIndex >= 0) {
+      // Update existing role
+      trip.invited_users[existingIndex].role = role;
+      collaborator = trip.invited_users[existingIndex];
+      this.saveTrip(trip);
+      return {
+        success: true,
+        trip,
+        collaborator,
+        message: `${collaborator.name} is already a member (access confirmed as ${role === 'editor' ? 'co-editor' : 'viewer'}).`
+      };
+    }
+
+    if (knownUser) {
+      collaborator = {
+        id: knownUser.id,
+        email: knownUser.email,
+        username: knownUser.name.toLowerCase().replace(/\s+/g, ''),
+        name: knownUser.name,
+        avatar: knownUser.avatar,
+        role,
+        invited_at: new Date().toISOString(),
+        accepted: true
+      };
+    } else {
+      const isEmail = cleanInput.includes('@');
+      const cleanName = isEmail ? cleanInput.split('@')[0] : cleanInput;
+      const formattedName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      const generatedEmail = isEmail ? cleanInput : `${cleanInput.toLowerCase()}@roamio.travel`;
+
+      collaborator = {
+        id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        email: generatedEmail,
+        username: cleanInput.toLowerCase(),
+        name: formattedName,
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        role,
+        invited_at: new Date().toISOString(),
+        accepted: true
+      };
+
+      // Register this new user in known users list so they can log in
+      this.registerKnownUser({
+        id: collaborator.id!,
+        name: collaborator.name,
+        email: collaborator.email,
+        avatar: collaborator.avatar,
+        interests: ['Culture', 'Food & Dining', 'Photography'],
+        joinedDate: 'Joined recently'
+      });
+    }
+
+    trip.invited_users.push(collaborator);
+    const emailLower = collaborator.email.toLowerCase();
+    if (!trip.collaborator_emails.includes(emailLower)) {
+      trip.collaborator_emails.push(emailLower);
+    }
+
+    this.saveTrip(trip);
+    return {
+      success: true,
+      trip,
+      collaborator,
+      message: `Invited ${collaborator.name} (${collaborator.email}). This plan is now in their My Plans and they can edit together.`
+    };
+  }
+
+  removeCollaboratorFromTrip(tripId: string, emailOrId: string): Trip {
+    const trip = this.getTripById(tripId);
+    if (!trip) return trip!;
+
+    const target = emailOrId.toLowerCase().trim();
+    if (Array.isArray(trip.invited_users)) {
+      trip.invited_users = trip.invited_users.filter(
+        u => u.email?.toLowerCase() !== target && u.id !== emailOrId && u.username?.toLowerCase() !== target
+      );
+    }
+    if (Array.isArray(trip.collaborator_emails)) {
+      trip.collaborator_emails = trip.collaborator_emails.filter(e => e.toLowerCase() !== target);
+    }
+    this.saveTrip(trip);
+    return trip;
   }
 
   getTripById(id: string): Trip | undefined {

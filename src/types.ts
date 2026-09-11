@@ -6,6 +6,11 @@ export interface User {
   email: string;
   phone?: string;
   avatar?: string;
+  bio?: string;
+  homeLocation?: string;
+  interests?: string[];
+  password?: string;
+  joinedDate?: string;
 }
 
 export interface Review {
@@ -213,9 +218,24 @@ export interface ItineraryItem {
   website?: string;
 }
 
+export interface TripCollaborator {
+  id?: string;
+  email: string;
+  username?: string;
+  name: string;
+  avatar?: string;
+  role: 'editor' | 'viewer';
+  invited_at: string;
+  accepted?: boolean;
+}
+
 export interface Trip {
   id: string;
   user_id: string;
+  owner_name?: string;
+  owner_email?: string;
+  invited_users?: TripCollaborator[];
+  collaborator_emails?: string[];
   title: string;
   origin: {
     country: string;

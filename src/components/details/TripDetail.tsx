@@ -16,7 +16,8 @@ import {
   Clock,
   Sliders,
   Trash2,
-  Users
+  Users,
+  UserPlus
 } from 'lucide-react';
 import { PlanBSuggestionCard } from '../planB/PlanBSuggestionCard';
 import { formatTime12 } from '../../utils/timeUtils';
@@ -195,6 +196,56 @@ export const TripDetail: React.FC<TripDetailProps> = ({
 
       {/* Main Content Sections */}
       <div className="space-y-6">
+        {/* Collaborative Planning Members Card */}
+        <div
+          id="collaborators-summary-box"
+          className="p-5 sm:p-6 rounded-3xl bg-white border border-[#D9CFC2] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#0EA5A5]/10 text-[#0EA5A5] flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[#1F2937] uppercase tracking-wider">
+                  Co-Planners & Collaborators
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-[#086666] border border-teal-200">
+                  Shared Workshop
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                <span className="text-xs text-[#374151]">
+                  Owner: <strong>{currentTrip.owner_name || 'Alex Rivera'}</strong>
+                </span>
+                {currentTrip.invited_users && currentTrip.invited_users.length > 0 ? (
+                  <>
+                    <span className="text-xs text-[#374151]/50">•</span>
+                    <span className="text-xs text-[#374151]">
+                      Co-editors: {currentTrip.invited_users.map(u => u.name).join(', ')}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs text-[#374151]/50">•</span>
+                    <span className="text-xs text-[#374151]/70 italic">
+                      No other members yet. Invite friends in the workshop timeline!
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onOpenTimeline(currentTrip)}
+            className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#086666] border border-teal-200 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-[#0EA5A5]" />
+            <span>Invite & Co-Edit in Workshop</span>
+          </button>
+        </div>
+
         {/* Budget vs. actual spend tracker */}
         <div
           id="budget-tracker-box"

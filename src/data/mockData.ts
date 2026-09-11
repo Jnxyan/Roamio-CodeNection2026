@@ -1146,6 +1146,47 @@ export const DEMO_USERS = [
     name: 'Alex Rivera',
     email: 'alex@roamio.travel',
     phone: '+1 415-555-0192',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    bio: 'Passionate travel photographer & foodie searching for hidden gems and authentic local cultures around the globe.',
+    homeLocation: 'San Francisco, United States',
+    interests: ['Culture', 'Food & Dining', 'Photography', 'Architecture', 'Nature & Hiking'],
+    password: 'roamio2026',
+    joinedDate: 'March 2025'
+  },
+  {
+    id: 'user-janice',
+    name: 'Janice Ng',
+    email: 'janiceng040803@gmail.com',
+    phone: '+1 650-555-0144',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
+    bio: 'Culture and culinary explorer focused on slow travel and local traditions.',
+    homeLocation: 'Singapore',
+    interests: ['Culture', 'Food & Dining', 'Photography', 'Historic Landmarks'],
+    password: 'roamio2026',
+    joinedDate: 'January 2026'
+  },
+  {
+    id: 'user-elena',
+    name: 'Elena Rostova',
+    email: 'elena@wanderlust.io',
+    phone: '+44 20-7946-0192',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    bio: 'Backpacker, scenic trekker, and alpine mountain lover.',
+    homeLocation: 'London, UK',
+    interests: ['Nature & Hiking', 'Adventure', 'Photography'],
+    password: 'roamio2026',
+    joinedDate: 'February 2026'
+  },
+  {
+    id: 'user-marcus',
+    name: 'Marcus Chen',
+    email: 'marcus.chen@voyage.co',
+    phone: '+1 212-555-0189',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    bio: 'Urban architecture buff and coffee shop nomad.',
+    homeLocation: 'New York, USA',
+    interests: ['Architecture', 'Food & Dining', 'Nightlife & Bars'],
+    password: 'roamio2026',
+    joinedDate: 'April 2025'
   }
 ];

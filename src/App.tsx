@@ -9,6 +9,7 @@ import { DestinationDetail } from './components/details/DestinationDetail';
 import { HotelDetail } from './components/details/HotelDetail';
 import { RestaurantDetail } from './components/details/RestaurantDetail';
 import { PlanDetail } from './components/details/PlanDetail';
+import { ProfilePage } from './components/ProfilePage';
 import { AuthModal } from './components/auth/AuthModal';
 import { PostCardItem } from './components/PostCard';
 import { db } from './services/db';
@@ -23,14 +24,15 @@ type ViewMode =
   | 'detail-destination'
   | 'detail-hotel'
   | 'detail-restaurant'
-  | 'detail-plan';
+  | 'detail-plan'
+  | 'profile';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => db.getCurrentUser());
   const [view, setView] = useState<ViewMode>('home');
   const [previousView, setPreviousView] = useState<ViewMode>('home');
   const [savedItems, setSavedItems] = useState<PostCardItem[]>(() => db.getSavedItems());
-  const [trips, setTrips] = useState<Trip[]>(() => db.getTrips());
+  const [trips, setTrips] = useState<Trip[]>(() => db.getTripsForUser(db.getCurrentUser()));
   const [activeTrip, setActiveTrip] = useState<Trip | null>(() => trips[0] || null);
 
   // Detail item states
@@ -63,15 +65,13 @@ export default function App() {
     setAllPostCards(db.getAllPostCardItems());
   }, []);
 
-  // Ensure trips are always freshly loaded whenever navigating to 'my-plans'
+  // Ensure trips are always freshly loaded whenever navigating to 'my-plans' or user changes
   useEffect(() => {
-    if (view === 'my-plans') {
-      const fresh = db.getTrips();
-      if (Array.isArray(fresh)) {
-        setTrips(fresh);
-      }
+    const fresh = db.getTripsForUser(currentUser);
+    if (Array.isArray(fresh)) {
+      setTrips(fresh);
     }
-  }, [view]);
+  }, [view, currentUser]);
 
   // Save/Unsave toggle
   const handleToggleSave = (item: PostCardItem, e?: React.MouseEvent) => {
@@ -239,6 +239,7 @@ export default function App() {
           <MyPlansPage
             trips={trips}
             activeTripId={activeTrip?.id}
+            currentUser={currentUser}
             onOpenTrip={(trip) => {
               setActiveTrip(trip);
               setView('itinerary');
@@ -272,14 +273,22 @@ export default function App() {
         {view === 'itinerary' && activeTrip && (
           <ItineraryBuilder
             trip={activeTrip}
+            currentUser={currentUser}
+            onSwitchUser={(user) => {
+              setCurrentUser(user);
+              db.setCurrentUser(user);
+              const userTrips = db.getTripsForUser(user);
+              setTrips(userTrips);
+              setView('my-plans');
+            }}
             onSaveTrip={handleUpdateTrip}
             onFinish={(updatedTrip) => {
               handleUpdateTrip(updatedTrip);
-              setTrips(db.getTrips());
+              setTrips(db.getTripsForUser(currentUser));
               setView('my-plans');
             }}
             onBack={() => {
-              setTrips(db.getTrips());
+              setTrips(db.getTripsForUser(currentUser));
               setView('my-plans');
             }}
           />
@@ -393,6 +402,25 @@ export default function App() {
             }
             onToggleLike={() => handleToggleLikePlan(activePlan.id)}
             onUseAsTemplate={handleUseAsTemplate}
+          />
+        )}
+
+        {/* VIEW 10: Profile, Preferences & Security */}
+        {view === 'profile' && (
+          <ProfilePage
+            currentUser={currentUser}
+            onUpdateUser={(updated) => {
+              setCurrentUser(updated);
+            }}
+            onNavigate={(tab) => {
+              if (tab === 'login') {
+                setAuthModalOpen(true);
+              } else {
+                setView(tab);
+              }
+            }}
+            savedCount={savedItems?.length || 0}
+            plansCount={trips?.length || 0}
           />
         )}
       </main>

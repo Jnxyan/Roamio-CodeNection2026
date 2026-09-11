@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trip, ItineraryItem, DiscoverablePlace } from '../../types';
+import { Trip, ItineraryItem, DiscoverablePlace, User, TripCollaborator } from '../../types';
 import { db } from '../../services/db';
+import { InviteCollaboratorModal } from './InviteCollaboratorModal';
 import {
   snapMinutesTo15,
   snapTimeTo15,
@@ -35,7 +36,11 @@ import {
   ArrowDown,
   Edit2,
   Check,
-  X
+  X,
+  UserPlus,
+  Users,
+  UserCheck,
+  ShieldCheck
 } from 'lucide-react';
 
 interface ItineraryBuilderProps {
@@ -43,13 +48,17 @@ interface ItineraryBuilderProps {
   onSaveTrip: (updatedTrip: Trip) => void;
   onFinish: (trip: Trip) => void;
   onBack: () => void;
+  currentUser?: User | null;
+  onSwitchUser?: (user: User) => void;
 }
 
 export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
   trip,
   onSaveTrip,
   onFinish,
-  onBack
+  onBack,
+  currentUser,
+  onSwitchUser
 }) => {
   if (!trip) {
     return (
@@ -77,6 +86,35 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
     position: 'before' | 'after';
   } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Collaboration state
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
+  const [quickInviteInput, setQuickInviteInput] = useState<string>('');
+  const [quickInviteFeedback, setQuickInviteFeedback] = useState<{ text: string; isError?: boolean; switchUser?: User } | null>(null);
+
+  const handleQuickInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = quickInviteInput.trim();
+    if (!query) return;
+    try {
+      const res = db.inviteUserToTrip(trip.id, query, 'editor');
+      onSaveTrip(res.trip);
+      setQuickInviteInput('');
+      const matchedUser = db.findUserByEmailOrUsername(res.collaborator.email);
+      setQuickInviteFeedback({
+        text: `Invited ${res.collaborator.name} (${res.collaborator.email})! Plan is now in their My Plans.`,
+        isError: false,
+        switchUser: matchedUser || undefined
+      });
+      setTimeout(() => setQuickInviteFeedback(null), 6000);
+    } catch (err: any) {
+      setQuickInviteFeedback({
+        text: err?.message || 'Could not invite user.',
+        isError: true
+      });
+      setTimeout(() => setQuickInviteFeedback(null), 5000);
+    }
+  };
 
   // Time editing state
   const [editingTimeItemId, setEditingTimeItemId] = useState<string | null>(null);
@@ -740,27 +778,118 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
           </div>
         </div>
 
-        {/* Day Selector Bar */}
-        <div className="pt-4 flex items-center gap-2 overflow-x-auto pb-1">
-          {Array.from({ length: trip.days || 1 }).map((_, dIdx) => (
+        {/* Day Selector Bar (Left) + Invite User Co-Editing Feature (Right) - Same Row */}
+        <div className="pt-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-t border-[#EFEAE2] mt-4">
+          {/* Left Side: Day selector tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            {Array.from({ length: trip.days || 1 }).map((_, dIdx) => (
+              <button
+                key={dIdx}
+                id={`tab-day-${dIdx + 1}`}
+                onClick={() => setActiveDayIndex(dIdx)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
+                  activeDayIndex === dIdx
+                    ? 'bg-[#0EA5A5] text-white shadow-sm shadow-[#0EA5A5]/25'
+                    : 'bg-[#FBF7F2] text-[#1F2937] border border-[#D9CFC2] hover:border-[#0EA5A5]'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Day {dIdx + 1}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Right Side: Invite user by username or email on the same row */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap self-start lg:self-auto">
+            {/* Collaborator Avatars Preview */}
+            {trip.invited_users && trip.invited_users.length > 0 && (
+              <div
+                className="flex items-center -space-x-2 mr-0.5 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setIsInviteModalOpen(true)}
+                title={`${trip.invited_users.length} collaborator(s) invited. Click to manage co-planners.`}
+              >
+                {trip.invited_users.slice(0, 3).map((u, i) => (
+                  <img
+                    key={u.email || i}
+                    src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
+                    alt={u.name}
+                    className="w-7 h-7 rounded-full border-2 border-white object-cover shadow-xs"
+                  />
+                ))}
+                {trip.invited_users.length > 3 && (
+                  <div className="w-7 h-7 rounded-full bg-[#0EA5A5] text-white text-[10px] font-bold border-2 border-white flex items-center justify-center shadow-xs">
+                    +{trip.invited_users.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Quick Invite Form (Username or Email) */}
+            <form onSubmit={handleQuickInvite} className="flex items-center gap-1.5">
+              <div className="relative">
+                <UserPlus className="w-3.5 h-3.5 text-[#374151]/60 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  id="workshop-invite-input"
+                  value={quickInviteInput}
+                  onChange={(e) => setQuickInviteInput(e.target.value)}
+                  placeholder="Invite username or email..."
+                  className="w-44 sm:w-56 pl-8 pr-2.5 py-1.5 rounded-xl border border-[#D9CFC2] text-xs bg-[#FBF7F2] text-[#1F2937] focus:outline-none focus:border-[#0EA5A5] focus:bg-white placeholder:text-[#374151]/50 shadow-2xs"
+                />
+              </div>
+              <button
+                type="submit"
+                id="workshop-btn-invite"
+                className="px-3 py-1.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
+              >
+                <span>Invite</span>
+              </button>
+            </form>
+
+            {/* Manage / View All Collaborators Button */}
             <button
-              key={dIdx}
-              id={`tab-day-${dIdx + 1}`}
-              onClick={() => setActiveDayIndex(dIdx)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-                activeDayIndex === dIdx
-                  ? 'bg-[#0EA5A5] text-white shadow-sm shadow-[#0EA5A5]/25'
-                  : 'bg-[#FBF7F2] text-[#1F2937] border border-[#D9CFC2] hover:border-[#0EA5A5]'
-              }`}
+              type="button"
+              id="workshop-btn-manage-collaborators"
+              onClick={() => setIsInviteModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl border border-[#D9CFC2] hover:border-[#0EA5A5] bg-[#FBF7F2] hover:bg-white text-xs font-bold text-[#1F2937] hover:text-[#0EA5A5] transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+              title="Manage collaborators & co-planning"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Day {dIdx + 1}</span>
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Co-planners</span>
+              {trip.invited_users && trip.invited_users.length > 0 && (
+                <span className="bg-[#0EA5A5]/15 text-[#086666] text-[10px] px-1.5 py-0.2 rounded-full font-extrabold">
+                  {trip.invited_users.length}
+                </span>
+              )}
             </button>
-          ))}
-          <span className="text-xs text-[#374151]/70 ml-2 font-medium">
-            (15-min snapping enforced)
-          </span>
+          </div>
         </div>
+
+        {/* Feedback message banner for quick invite */}
+        {quickInviteFeedback && (
+          <div
+            className={`mt-2 px-3.5 py-2 rounded-xl text-xs flex items-center justify-between gap-2 transition-all ${
+              quickInviteFeedback.isError
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-teal-50 text-[#086666] border border-teal-200 font-medium'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-[#0EA5A5]" />
+              <span className="truncate">{quickInviteFeedback.text}</span>
+            </div>
+            {quickInviteFeedback.switchUser && onSwitchUser && (
+              <button
+                type="button"
+                onClick={() => onSwitchUser(quickInviteFeedback.switchUser!)}
+                className="px-2.5 py-1 rounded-lg bg-[#0EA5A5] text-white text-[11px] font-bold shrink-0 hover:bg-[#0B8585] transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <span>Switch to {quickInviteFeedback.switchUser.name.split(' ')[0]}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Two-Panel Layout (Section 3.7) */}
@@ -1444,6 +1573,18 @@ export const ItineraryBuilder: React.FC<ItineraryBuilderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Invite Collaborator Modal */}
+      <InviteCollaboratorModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        trip={trip}
+        currentUser={currentUser}
+        onTripUpdated={(updatedTrip) => {
+          onSaveTrip(updatedTrip);
+        }}
+        onSwitchUser={onSwitchUser}
+      />
     </div>
   );
 };
