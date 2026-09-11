@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trip } from '../../types';
+import { Trip, Destination } from '../../types';
 import { db } from '../../services/db';
 import {
   ArrowLeft,
@@ -28,6 +28,7 @@ interface TripDetailProps {
   onOpenTimeline: (trip: Trip) => void;
   onDeleteTrip: (tripId: string) => void;
   onUpdateTrip?: (trip: Trip) => void;
+  onViewPlace?: (destination: Destination) => void;
 }
 
 export const TripDetail: React.FC<TripDetailProps> = ({
@@ -35,7 +36,8 @@ export const TripDetail: React.FC<TripDetailProps> = ({
   onBack,
   onOpenTimeline,
   onDeleteTrip,
-  onUpdateTrip
+  onUpdateTrip,
+  onViewPlace
 }) => {
   const [currentTrip, setCurrentTrip] = useState<Trip>(trip);
   const [newChecklistText, setNewChecklistText] = useState('');
@@ -111,7 +113,9 @@ export const TripDetail: React.FC<TripDetailProps> = ({
           <button
             id={`btn-delete-trip-detail-${currentTrip.id}`}
             onClick={() => {
+              db.deleteTrip(currentTrip.id);
               onDeleteTrip(currentTrip.id);
+              onBack();
             }}
             className="px-3.5 py-2 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-[#E85555] font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
             title="Delete this trip plan"
@@ -256,6 +260,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({
         <PlanBSuggestionCard
           trip={currentTrip}
           onUpdateTrip={handleTripUpdated}
+          onViewPlace={onViewPlace}
         />
 
         {/* Day-by-day plan with times and locations */}

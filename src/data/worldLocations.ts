@@ -804,3 +804,50 @@ export function getCitiesForCountry(countryName: string): string[] {
 
   return [];
 }
+
+// All formatted "City, Country" options worldwide (e.g. "San Francisco, United States", "Kyoto, Japan")
+export const ALL_LOCATION_OPTIONS: string[] = (() => {
+  const list: string[] = [];
+  const seen = new Set<string>();
+
+  // Add all City, Country pairs from COUNTRY_CITIES
+  for (const [country, cities] of Object.entries(COUNTRY_CITIES)) {
+    for (const city of cities) {
+      const combined = `${city}, ${country}`;
+      if (!seen.has(combined.toLowerCase())) {
+        seen.add(combined.toLowerCase());
+        list.push(combined);
+      }
+    }
+  }
+
+  // Also include countries from ALL_COUNTRIES if not already covered
+  for (const country of ALL_COUNTRIES) {
+    if (!COUNTRY_CITIES[country]) {
+      const combined = `${country}`;
+      if (!seen.has(combined.toLowerCase())) {
+        seen.add(combined.toLowerCase());
+        list.push(combined);
+      }
+    }
+  }
+
+  // Sort alphabetically
+  list.sort((a, b) => a.localeCompare(b));
+  return list;
+})();
+
+// Helper to parse a "City, Country" or "City" string into separate city and country properties
+export function parseCityAndCountry(locationStr: string): { city: string; country: string } {
+  if (!locationStr || !locationStr.trim()) {
+    return { city: '', country: '' };
+  }
+  const trimmed = locationStr.trim();
+  if (trimmed.includes(',')) {
+    const parts = trimmed.split(',');
+    const city = parts[0].trim();
+    const country = parts.slice(1).join(',').trim();
+    return { city, country };
+  }
+  return { city: trimmed, country: '' };
+}

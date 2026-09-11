@@ -280,6 +280,125 @@ export const INITIAL_DESTINATIONS: Destination[] = [
         comment: 'Pure wilderness bliss! Moraine lake and Lake Louise look even more vivid in real life than any photograph.'
       }
     ]
+  },
+  {
+    id: 'place-kyoto-railway-museum',
+    name: 'Kyoto Railway Museum',
+    country: 'Japan',
+    city: 'Kyoto',
+    short_description: 'Japan’s premier indoor railway museum featuring 53 preserved historic locomotives, bullet trains, interactive driving simulators, and a panoramic indoor observation terrace overlooking active bullet train lines.',
+    cover_photo: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1538332576228-eb5b4c4de6f5?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80'
+    ],
+    rating: 4.88,
+    reviews_count: 1940,
+    energy_level: 2,
+    ticket_price: '$10 admission (¥1,500)',
+    is_free: false,
+    typical_visit_time: '2–3 hours',
+    activities: [
+      'Interactive Shinkansen Bullet Train Simulator',
+      'Historic 53-Train Heritage Fleet & Umekoji Roundhouse Turntable',
+      'Covered Observation Sky Terrace Overlooking Train Yards',
+      'SL Steam Locomotive Heritage Ride',
+      'Giant Railway Diorama Lighting Demonstration'
+    ],
+    operating_hours: '10:00 – 17:00 daily (Closed Wednesdays)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Kyoto+Railway+Museum',
+    reviews: [
+      {
+        id: 'rev-railway-1',
+        user: 'Kenji Takahashi',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '3 days ago',
+        comment: 'The absolute best rainy-day alternative in Kyoto! Completely sheltered and spacious with incredible full-scale trains and hands-on simulators.'
+      },
+      {
+        id: 'rev-railway-2',
+        user: 'Emily Watson',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: 'When the weather turned rainy, this was an unforgettable experience. The observation deck view of passing Shinkansen is superb.'
+      }
+    ]
+  },
+  {
+    id: 'place-kyoto-manga-museum',
+    name: 'Kyoto International Manga Museum',
+    country: 'Japan',
+    city: 'Kyoto',
+    short_description: 'A cozy cultural indoor museum set within a beautifully restored 1929 elementary school, housing over 300,000 manga volumes across multi-language galleries and quiet reading halls.',
+    cover_photo: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80'
+    ],
+    rating: 4.82,
+    reviews_count: 1460,
+    energy_level: 2,
+    ticket_price: '$8 admission (¥1,000)',
+    is_free: false,
+    typical_visit_time: '2 hours',
+    activities: [
+      'Wall of Manga with 50,000 Browseable Volumes',
+      'International Translation Manga Expo',
+      'Live Manga Portrait Drawing Studio',
+      'Historic 1929 Wood School Architecture Tour'
+    ],
+    operating_hours: '10:30 – 17:30 daily (Closed Wednesdays)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Kyoto+International+Manga+Museum',
+    reviews: [
+      {
+        id: 'rev-manga-1',
+        user: 'Hana Tanaka',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '5 days ago',
+        comment: 'Peaceful and completely sheltered from rainy weather. You can read manga from all eras and languages in cozy wooden classrooms.'
+      }
+    ]
+  },
+  {
+    id: 'place-mori-art-museum',
+    name: 'Mori Art Museum & Indoor Sky Deck',
+    country: 'Japan',
+    city: 'Tokyo',
+    short_description: 'Enclosed 53rd-floor contemporary art museum situated atop Roppongi Hills Mori Tower, offering world-class visual exhibits and an indoor glass observatory with panoramic views.',
+    cover_photo: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=1200&q=80'
+    ],
+    rating: 4.89,
+    reviews_count: 2210,
+    energy_level: 2,
+    ticket_price: '$14 admission (¥2,000)',
+    is_free: false,
+    typical_visit_time: '2–3 hours',
+    activities: [
+      'Contemporary Art & Digital Installations',
+      '52nd-Floor Indoor Tokyo City View Observation Gallery',
+      'Museum Cafe with High-Rise Skyline Views'
+    ],
+    operating_hours: '10:00 – 22:00 daily (Tuesdays: 10:00 – 17:00)',
+    maps_url: 'https://www.google.com/maps/search/?api=1&query=Mori+Art+Museum+Tokyo',
+    reviews: [
+      {
+        id: 'rev-mori-1',
+        user: 'Liam O’Connor',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        rating: 5,
+        date: '1 week ago',
+        comment: 'Totally shielded from bad weather. The indoor views over Tokyo from 52 stories up are breathtaking even through cloud or rain.'
+      }
+    ]
   }
 ];
 

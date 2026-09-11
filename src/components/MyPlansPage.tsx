@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trip } from '../types';
+import { Trip, Destination } from '../types';
 import { db } from '../services/db';
 import {
   MapPin,
@@ -22,6 +22,7 @@ interface MyPlansPageProps {
   onCreateNew: () => void;
   onDeleteTrip: (tripId: string) => void;
   onUpdateTrip?: (trip: Trip) => void;
+  onViewPlace?: (destination: Destination) => void;
 }
 
 export const MyPlansPage: React.FC<MyPlansPageProps> = ({
@@ -30,16 +31,41 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
   onOpenTrip,
   onCreateNew,
   onDeleteTrip,
-  onUpdateTrip
+  onUpdateTrip,
+  onViewPlace
 }) => {
-  // Always use trips provided via props as single source of truth, fallback to db.getTrips()
-  const safeTrips = Array.isArray(trips) ? trips : db.getTrips();
+  // Synchronized state with props and db
+  const [localTrips, setLocalTrips] = useState<Trip[]>(() => {
+    return Array.isArray(trips) && trips.length > 0 ? trips : db.getTrips();
+  });
+
+  // Keep localTrips in sync whenever trips prop updates
+  React.useEffect(() => {
+    if (Array.isArray(trips)) {
+      setLocalTrips(trips);
+    }
+  }, [trips]);
 
   // Manage selected trip for the detail page view
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   // If a trip is selected, find the trip object
-  const selectedTrip = selectedTripId ? safeTrips.find(t => t.id === selectedTripId) || null : null;
+  const selectedTrip = selectedTripId ? localTrips.find(t => t.id === selectedTripId) || null : null;
+
+  const handleDelete = (e: React.MouseEvent, tripId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 1. Immediately remove from local list for instantaneous UI removal
+    setLocalTrips(prev => prev.filter(t => t.id !== tripId));
+    // 2. Persist deletion in db and localStorage
+    db.deleteTrip(tripId);
+    // 3. Notify parent app state
+    onDeleteTrip(tripId);
+    // 4. If selected trip was this one, clear detail view
+    if (selectedTripId === tripId) {
+      setSelectedTripId(null);
+    }
+  };
 
   // If a plan is selected, render the dedicated Trip Detail Page
   if (selectedTrip) {
@@ -49,10 +75,13 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
         onBack={() => setSelectedTripId(null)}
         onOpenTimeline={(trip) => onOpenTrip(trip)}
         onDeleteTrip={(tripId) => {
+          setLocalTrips(prev => prev.filter(t => t.id !== tripId));
+          db.deleteTrip(tripId);
           onDeleteTrip(tripId);
           setSelectedTripId(null);
         }}
         onUpdateTrip={onUpdateTrip}
+        onViewPlace={onViewPlace}
       />
     );
   }
@@ -82,7 +111,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
         </button>
       </div>
 
-      {safeTrips.length === 0 ? (
+      {localTrips.length === 0 ? (
         <div className="text-center py-20 px-4 bg-white rounded-3xl border border-[#D9CFC2] max-w-md mx-auto">
           <div className="w-14 h-14 rounded-2xl bg-[#0EA5A5]/10 text-[#0EA5A5] flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-7 h-7" />
@@ -101,7 +130,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {safeTrips.map((trip) => {
+          {localTrips.map((trip) => {
             const coverPhoto = getTripCoverImage(trip);
             const totalEstimatedSpend =
               (trip.combined_package?.total_combined_price || 0) +
@@ -140,10 +169,7 @@ export const MyPlansPage: React.FC<MyPlansPageProps> = ({
                     {/* Delete button: Immediate selective removal */}
                     <button
                       id={`btn-delete-trip-${trip.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteTrip(trip.id);
-                      }}
+                      onClick={(e) => handleDelete(e, trip.id)}
                       aria-label="Delete trip plan"
                       title="Delete trip"
                       className="p-2 rounded-xl bg-white/95 text-[#374151] hover:bg-rose-50 hover:text-red-500 transition-all shadow-sm cursor-pointer"

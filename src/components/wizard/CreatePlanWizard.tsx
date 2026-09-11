@@ -24,7 +24,7 @@ import {
   CalendarDays,
   ChevronDown
 } from 'lucide-react';
-import { ALL_COUNTRIES, getCitiesForCountry } from '../../data/worldLocations';
+import { ALL_LOCATION_OPTIONS, parseCityAndCountry } from '../../data/worldLocations';
 import { SearchableLocationInput } from './SearchableLocationInput';
 
 interface CreatePlanWizardProps {
@@ -54,71 +54,25 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // Step 1: Trip basics - Origin
-  const [fromCountry, setFromCountry] = useState('United States');
-  const [fromCity, setFromCity] = useState('San Francisco');
+  // Step 1: Trip basics - Origin & Destination (Combined "City, Country" field)
+  // Per requirement: Do not autofill the location. Let the user choose or enter it.
+  const [originLocation, setOriginLocation] = useState<string>('');
 
-  // Step 1: Trip basics - Destination
-  const initDestCountry = initialDestination?.country
-    ? initialDestination.country
-    : templatePlan?.destination_name.includes(',')
-    ? templatePlan.destination_name.split(',')[1].trim()
-    : 'Japan';
-
-  const initDestCity = initialDestination?.city
-    ? initialDestination.city
-    : templatePlan?.destination_name.includes(',')
-    ? templatePlan.destination_name.split(',')[0].trim()
-    : 'Kyoto';
-
-  const [destCountry, setDestCountry] = useState(initDestCountry);
-  const [destCity, setDestCity] = useState(initDestCity);
+  const initDest = templatePlan?.destination_name
+    ? templatePlan.destination_name
+    : initialDestination?.city && initialDestination?.country
+    ? `${initialDestination.city}, ${initialDestination.country}`
+    : '';
+  const [destinationLocation, setDestinationLocation] = useState<string>(initDest);
   const [additionalDestCities, setAdditionalDestCities] = useState<string[]>([]);
   const [extraCityInput, setExtraCityInput] = useState('');
   const [showAddCity, setShowAddCity] = useState(false);
-
-  // Available origin cities depending on selected fromCountry
-  const availableOriginCities = useMemo(() => {
-    return getCitiesForCountry(fromCountry);
-  }, [fromCountry]);
-
-  // Available destination cities depending on selected destCountry
-  const availableDestCities = useMemo(() => {
-    return getCitiesForCountry(destCountry);
-  }, [destCountry]);
-
-  // Primary destination formatted string (e.g. "Kyoto, Japan")
-  const primaryDestination = useMemo(() => {
-    if (!destCity && !destCountry) return 'Kyoto, Japan';
-    if (!destCountry) return destCity;
-    if (!destCity) return destCountry;
-    return destCity.toLowerCase().includes(destCountry.toLowerCase())
-      ? destCity
-      : `${destCity}, ${destCountry}`;
-  }, [destCity, destCountry]);
+  const [step1Error, setStep1Error] = useState<string | null>(null);
 
   // Full destination cities array for itinerary generation and display
   const destinationCities = useMemo(() => {
-    return [primaryDestination, ...additionalDestCities].filter(Boolean);
-  }, [primaryDestination, additionalDestCities]);
-
-  // Update Origin Country and auto-select a valid city from that country
-  const handleFromCountryChange = (newCountry: string) => {
-    setFromCountry(newCountry);
-    const cities = getCitiesForCountry(newCountry);
-    if (cities.length > 0 && !cities.some(c => c.toLowerCase() === fromCity.toLowerCase())) {
-      setFromCity(cities[0]);
-    }
-  };
-
-  // Update Destination Country and auto-select a valid city from that country
-  const handleDestCountryChange = (newCountry: string) => {
-    setDestCountry(newCountry);
-    const cities = getCitiesForCountry(newCountry);
-    if (cities.length > 0 && !cities.some(c => c.toLowerCase() === destCity.toLowerCase())) {
-      setDestCity(cities[0]);
-    }
-  };
+    return [destinationLocation.trim(), ...additionalDestCities].filter(Boolean);
+  }, [destinationLocation, additionalDestCities]);
 
   // Travel dates (implied duration)
   const [startDate, setStartDate] = useState('2026-10-12');
@@ -282,12 +236,13 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
 
   // Complete wizard
   const handleFinalize = () => {
+    const originParsed = parseCityAndCountry(originLocation);
     const newTrip: Trip = {
       id: `trip-${Date.now()}`,
       user_id: 'user-alex',
       title: tripTitle.trim() || `My Trip to ${destinationCities[0] || 'Kyoto'}`,
-      origin: { country: fromCountry, city: fromCity },
-      destinations: destinationCities,
+      origin: originParsed.city ? originParsed : undefined,
+      destinations: destinationCities.length > 0 ? destinationCities : [destinationLocation.trim() || 'Kyoto, Japan'],
       start_date: startDate,
       end_date: endDate,
       days: calculatedDays,
@@ -356,62 +311,42 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
         {/* STEP 1: Trip Basics */}
         {currentStep === 1 && (
           <div className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                  Origin Country
-                </label>
-                <SearchableLocationInput
-                  id="select-origin-country"
-                  value={fromCountry}
-                  onChange={handleFromCountryChange}
-                  options={ALL_COUNTRIES}
-                  placeholder="e.g. United States"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                  Origin City
-                </label>
-                <SearchableLocationInput
-                  id="select-origin-city"
-                  value={fromCity}
-                  onChange={setFromCity}
-                  options={availableOriginCities}
-                  placeholder="e.g. San Francisco"
-                />
-              </div>
+            {/* Origin (Combined City + Country in ONE field) */}
+            <div>
+              <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
+                Origin
+              </label>
+              <SearchableLocationInput
+                id="select-origin-location"
+                value={originLocation}
+                onChange={setOriginLocation}
+                options={ALL_LOCATION_OPTIONS}
+                placeholder="e.g. San Francisco, United States"
+                icon={<MapPin className="w-4 h-4" />}
+              />
             </div>
 
-            {/* Destination Country & Destination City */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                  Destination Country
-                </label>
-                <SearchableLocationInput
-                  id="select-destination-country"
-                  value={destCountry}
-                  onChange={handleDestCountryChange}
-                  options={ALL_COUNTRIES}
-                  placeholder="e.g. Japan"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
-                  Destination City
-                </label>
-                <SearchableLocationInput
-                  id="select-destination-city"
-                  value={destCity}
-                  onChange={setDestCity}
-                  options={availableDestCities}
-                  placeholder="e.g. Kyoto"
-                  icon={<MapPin className="w-4 h-4" />}
-                />
-              </div>
+            {/* Destination (Combined City + Country in ONE field) */}
+            <div>
+              <label className="block text-xs font-bold text-[#1F2937] mb-1.5">
+                Destination
+              </label>
+              <SearchableLocationInput
+                id="select-destination-location"
+                value={destinationLocation}
+                onChange={(val) => {
+                  setDestinationLocation(val);
+                  if (step1Error) setStep1Error(null);
+                }}
+                options={ALL_LOCATION_OPTIONS}
+                placeholder="e.g. Kyoto, Japan"
+                icon={<MapPin className="w-4 h-4" />}
+              />
+              {step1Error && (
+                <p className="text-xs font-semibold text-[#E85555] mt-1.5 flex items-center gap-1">
+                  <span>⚠️</span> {step1Error}
+                </p>
+              )}
             </div>
 
             {/* Additional Destinations (Multi-city enabled) */}
@@ -448,8 +383,8 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
                     id="select-add-destination-city"
                     value={extraCityInput}
                     onChange={setExtraCityInput}
-                    options={availableDestCities.length > 0 ? availableDestCities : ALL_COUNTRIES}
-                    placeholder="Type or select additional city..."
+                    options={ALL_LOCATION_OPTIONS}
+                    placeholder="e.g. Tokyo, Japan"
                     icon={<MapPin className="w-4 h-4" />}
                   />
                 </div>
@@ -457,10 +392,7 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
                   type="button"
                   onClick={() => {
                     if (extraCityInput.trim()) {
-                      const formatted =
-                        destCountry && !extraCityInput.includes(',')
-                          ? `${extraCityInput.trim()}, ${destCountry}`
-                          : extraCityInput.trim();
+                      const formatted = extraCityInput.trim();
                       if (!additionalDestCities.includes(formatted)) {
                         setAdditionalDestCities([...additionalDestCities, formatted]);
                       }
@@ -914,7 +846,14 @@ export const CreatePlanWizard: React.FC<CreatePlanWizardProps> = ({
           {currentStep < 5 ? (
             <button
               id={`btn-wizard-next-step-${currentStep}`}
-              onClick={() => setCurrentStep(currentStep + 1)}
+              onClick={() => {
+                if (currentStep === 1 && !destinationLocation.trim()) {
+                  setStep1Error('Please enter or select a destination to continue.');
+                  return;
+                }
+                setStep1Error(null);
+                setCurrentStep(currentStep + 1);
+              }}
               className="px-6 py-2.5 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
             >
               <span>Continue</span>

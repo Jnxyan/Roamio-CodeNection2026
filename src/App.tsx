@@ -250,6 +250,11 @@ export default function App() {
             }}
             onDeleteTrip={handleDeleteTrip}
             onUpdateTrip={handleUpdateTrip}
+            onViewPlace={(destination) => {
+              setPreviousView('my-plans');
+              setActiveDestination(destination);
+              setView('detail-destination');
+            }}
           />
         )}
 

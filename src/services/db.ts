@@ -478,7 +478,23 @@ class RoamioDataStore {
   }
 
   getDestinationById(id: string): Destination | undefined {
-    return this.destinations.find(d => d.id === id);
+    if (!id) return undefined;
+    const cleanId = id.trim().toLowerCase();
+    // 1. Direct ID match
+    const byId = this.destinations.find(d => d.id.toLowerCase() === cleanId);
+    if (byId) return byId;
+
+    // 2. Direct name match
+    const byName = this.destinations.find(d => d.name.toLowerCase() === cleanId);
+    if (byName) return byName;
+
+    // 3. Substring / fuzzy match
+    const byFuzzy = this.destinations.find(d => 
+      cleanId.includes(d.name.toLowerCase()) ||
+      d.name.toLowerCase().includes(cleanId) ||
+      d.id.toLowerCase().includes(cleanId)
+    );
+    return byFuzzy;
   }
 
   addDestinationReview(

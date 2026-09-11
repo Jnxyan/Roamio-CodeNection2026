@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Trip } from '../../types';
+import { Trip, Destination } from '../../types';
+import { db } from '../../services/db';
 import {
   getPlanBSuggestion,
   isPlanBActive,
@@ -14,25 +15,21 @@ import {
   CheckCircle2,
   RotateCcw,
   X,
-  ExternalLink,
-  ShieldCheck,
   Clock,
-  DollarSign,
-  MapPin,
-  Sparkles,
   Info
 } from 'lucide-react';
 
 interface PlanBSuggestionCardProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  onViewPlace?: (destination: Destination) => void;
 }
 
 export const PlanBSuggestionCard: React.FC<PlanBSuggestionCardProps> = ({
   trip,
-  onUpdateTrip
+  onUpdateTrip,
+  onViewPlace
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
@@ -96,11 +93,20 @@ export const PlanBSuggestionCard: React.FC<PlanBSuggestionCardProps> = ({
     setTimeout(() => setFeedbackToast(null), 3500);
   };
 
+  // Directly redirect to place details page for suggested Plan B location
+  const handleViewPlace = () => {
+    if (!onViewPlace || !activeSuggestion) return;
+    const dest = db.getDestinationById(activeSuggestion.suggested.placeId) ||
+                 db.getDestinationById(activeSuggestion.suggested.name);
+    if (dest) {
+      onViewPlace(dest);
+    }
+  };
+
   const handleApplyPlanB = () => {
     if (!activeSuggestion) return;
     const updated = applyPlanBToTrip(trip, activeSuggestion);
     onUpdateTrip(updated);
-    setIsModalOpen(false);
     showToast(`Plan B Applied: ${activeSuggestion.suggested.name} scheduled.`);
   };
 
@@ -108,7 +114,6 @@ export const PlanBSuggestionCard: React.FC<PlanBSuggestionCardProps> = ({
     if (!activeSuggestion) return;
     const reverted = revertPlanB(trip, activeSuggestion);
     onUpdateTrip(reverted);
-    setIsModalOpen(false);
     showToast(`Reverted to original plan: ${activeSuggestion.original.name}`);
   };
 
@@ -162,7 +167,7 @@ export const PlanBSuggestionCard: React.FC<PlanBSuggestionCardProps> = ({
             <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
               <button
                 id="btn-view-active-plan-b"
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleViewPlace}
                 className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100/50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               >
                 View Details
@@ -260,7 +265,7 @@ export const PlanBSuggestionCard: React.FC<PlanBSuggestionCardProps> = ({
               <button
                 id="btn-view-plan-b"
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleViewPlace}
                 className="px-3.5 py-1.5 rounded-xl bg-white border border-[#D9CFC2] hover:border-[#0EA5A5] text-[#1F2937] hover:text-[#0EA5A5] text-xs font-bold transition-all shadow-2xs cursor-pointer"
               >
                 View Plan B
@@ -275,152 +280,6 @@ export const PlanBSuggestionCard: React.FC<PlanBSuggestionCardProps> = ({
                 <span>Use Plan B</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PLAN B DETAIL MODAL */}
-      {isModalOpen && (
-        <div
-          id="plan-b-modal-overlay"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            id="plan-b-modal-content"
-            className="bg-white rounded-3xl border border-[#D9CFC2] max-w-lg w-full overflow-hidden shadow-xl animate-scale-up"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Modal Header Image */}
-            <div className="relative h-44 w-full bg-[#1F2937] overflow-hidden">
-              <img
-                src={activeSuggestion.suggested.image}
-                alt={activeSuggestion.suggested.name}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="absolute bottom-3 left-4 right-4 text-white">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0EA5A5] text-white uppercase tracking-wider">
-                  Suggested Alternative
-                </span>
-                <h3 className="text-lg font-extrabold font-display text-white mt-1">
-                  {activeSuggestion.suggested.name}
-                </h3>
-                <p className="text-xs text-white/80">
-                  {activeSuggestion.suggested.category}
-                </p>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {/* Why suggested */}
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-1">
-                <span className="font-extrabold text-amber-900 flex items-center gap-1.5">
-                  <CloudRain className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Why this was suggested:</span>
-                </span>
-                <p className="text-amber-800 leading-relaxed">
-                  {activeSuggestion.conditionDetail}
-                </p>
-              </div>
-
-              {/* Quick Comparison */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-[#FBF7F2] border border-[#D9CFC2]">
-                  <span className="text-[10px] font-bold text-[#374151]/60 uppercase block mb-1">Original Plan</span>
-                  <div className="font-bold text-[#1F2937]">{activeSuggestion.original.name}</div>
-                  <div className="text-[11px] text-[#374151] mt-0.5">{activeSuggestion.original.timeFormatted}</div>
-                  <div className="text-[11px] text-amber-700 font-semibold mt-1">⚠️ Outdoor trail</div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#0EA5A5]/10 border border-[#0EA5A5]/40">
-                  <span className="text-[10px] font-bold text-[#0EA5A5] uppercase block mb-1">Plan B Substitution</span>
-                  <div className="font-bold text-[#1F2937]">{activeSuggestion.suggested.name}</div>
-                  <div className="text-[11px] font-bold text-[#0EA5A5] mt-0.5">{activeSuggestion.suggested.timeFormatted}</div>
-                  <div className="text-[11px] text-emerald-700 font-semibold mt-1">✓ 100% Indoor & sheltered</div>
-                </div>
-              </div>
-
-              {/* Highlights */}
-              <div>
-                <h4 className="text-xs font-bold text-[#1F2937] uppercase tracking-wider mb-2">
-                  Key Venue Highlights
-                </h4>
-                <ul className="space-y-1.5 text-xs text-[#374151]">
-                  {activeSuggestion.suggested.highlights.map((h, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-[#0EA5A5] font-bold">•</span>
-                      <span>{h}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Time & Cost Info */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#D9CFC2] text-xs">
-                <div className="flex items-center gap-1.5 text-[#374151]">
-                  <Clock className="w-4 h-4 text-[#0EA5A5]" />
-                  <span>Duration: <strong>{activeSuggestion.suggested.durationMins} mins</strong></span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[#374151]">
-                  <DollarSign className="w-4 h-4 text-[#0EA5A5]" />
-                  <span>Est. Cost: <strong>{activeSuggestion.suggested.costLabel}</strong></span>
-                </div>
-                {activeSuggestion.suggested.mapsUrl && (
-                  <a
-                    href={activeSuggestion.suggested.mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#0EA5A5] hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>View Map</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Footer Actions */}
-            <div className="p-4 bg-[#FBF7F2] border-t border-[#D9CFC2] flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#374151] hover:bg-[#EFEAE2] transition-colors cursor-pointer"
-              >
-                Keep Original Itinerary
-              </button>
-
-              {activePlanB ? (
-                <button
-                  type="button"
-                  onClick={handleRevert}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Revert to Original</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleApplyPlanB}
-                  className="px-5 py-2 rounded-xl bg-[#0EA5A5] hover:bg-[#0B8585] text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Use Plan B Now</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
