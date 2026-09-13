@@ -31,8 +31,8 @@ Manual interest voting (Dropped)
 Requires users to create choices, wait for votes and process results for every trip
 
 2.2 Ideation Boards
+https://drive.google.com/file/d/1rHtWy9JuhrZQCH1QZfHfRdnFiSIXT7JA/view?usp=sharing
 
-mindmap.png
 2.3 Mentor Consultation
 Date
 Mentor
@@ -48,11 +48,13 @@ Even if you disagreed with a piece of feedback, you can say so and explain why. 
 UI Prototype: Roamio — Travel Planner
 
 
-
+https://drive.google.com/file/d/1NrIHJ3eH9QhLDP9fJImNZIy1_AlfWEns/view?usp=sharing
 Explore destinations and Community Plans. Users can search, filter, and save destinations or itineraries shared by other travellers. 
 
+https://drive.google.com/file/d/1j-4YgpQkGcJjQUjQ1MJ0zzXffALfDobq/view?usp=sharing
 Personalized Travel Interests Users can select or edit their travel interests, allowing Roamio to recommend more relevant places and activities. 
 
+https://drive.google.com/file/d/1sWdjAtBMO5iue_NzJFkP0M0LYmBpyIwY/view?usp=sharing
 Travel Tips and Reusable Templates. Users can review packing lists, cautions, and cultural tips, then select “Use as template” to customize the itinerary for their own trip.
 4. What Makes It Different
 
