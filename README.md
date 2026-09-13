@@ -3,9 +3,12 @@ Team: Ng Xin Yan, Tan Wen Xuan
 Problem Statement: Travel Planner
 Video Presentation: https://youtu.be/5WwJlkhSxWc?si=bT0TscWUSieGJ-r0
 Presentation Slides: https://canva.link/ws2z482bbytalze
+
 1. Project Overview
 The Problem. Travel planning is split across booking websites, itinerary apps and group chats. Travellers must research places, collect group preferences, enter information manually, and rebuild plans when conditions change. Apps such as Wandelog and Triplt organise itineraries or reservations, but much of the discovery and replanning remains manual.
+
 Our Solution. Our community-first planner lets users browse rated itineraries and plans, read advice from previous travellers, and copy plans as an editable template. Invited members saved interests and rank suitable places for the group. Weather checks begin three days before outdoor activities, update daily and suggest a plan B when needed.
+
 Core features:
 1. Community plans with ratings, advice, reminders and cautions
 2. One-click Use as Template
@@ -13,6 +16,7 @@ Core features:
 4. Editable timeline with weather monitoring and Plan B
 2. Ideation & Process
 2.1 Ideas We Considered
+
 Idea
 Why it was dropped / kept
 Community plans include reminder and caution (Chosen)
